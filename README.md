@@ -23,6 +23,6 @@ Catalogue, fiche produit, panier, commande, FedaPay (la clé secrète reste côt
 
 ## Sécurité (à lire avant le backend)
 - Ne jamais mettre la clé `service_role` ni la clé secrète FedaPay dans une variable `VITE_`. Elles vivent seulement dans des fonctions serveur.
-- `VITE_DEMO_ADMIN=true` n'est à utiliser qu'en démonstration. Ne jamais l'activer en production.
+- Pendant la démonstration, `/admin` est ouvert à tous (données fictives). Avant le lancement, ajouter `VITE_DEMO_ADMIN=false` dans Vercel pour le fermer, puis le protéger par un vrai rôle administrateur Supabase.
 - Premier administrateur : après inscription, exécuter dans le SQL Editor `update public.profiles set is_admin = true where id = '<id du compte>';`
 - Le statut « paid » ne doit être posé que par le webhook FedaPay (signature, montant et référence vérifiés, traitement unique).

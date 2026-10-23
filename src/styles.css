@@ -104,3 +104,4 @@ body{background:#fff}
 .hero h1{font-size:26px;max-width:14ch}.hero p{max-width:32ch;margin:8px 0 16px}
 .trust{display:flex;gap:16px;overflow-x:auto;border:0;padding:0 0 4px;margin:0 0 8px;font-size:13px;white-space:nowrap}
 @media(min-width:768px){.hero{min-height:240px;padding:48px;background:var(--orange) var(--hero-image) right center/auto 100% no-repeat}.hero h1{font-size:38px;max-width:18ch}.hero p{font-size:18px}}
+.announce{background:var(--ink);color:#fff;text-align:center;font-size:14px;padding:8px 12px}table input,table select{min-height:40px;min-width:140px}.line[style*="block"]{display:block}

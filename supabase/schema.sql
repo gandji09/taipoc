@@ -91,3 +91,50 @@ begin
 end $$;
 revoke all on function public.admin_set_status(uuid, text, text) from public, anon;
 grant execute on function public.admin_set_status(uuid, text, text) to authenticated;
+
+-- ===== Administration : produits détaillés, paiements, témoignages, messages, annonces =====
+alter table public.products add column weight_kg numeric, add column lead_time_days int, add column variants text[] default '{}',
+  add column stock_status text default 'Disponible' check (stock_status in ('Disponible','Sur commande','Indisponible')), add column is_qualified boolean default false;
+-- Infos internes (fournisseur, prix d'achat) : table séparée, jamais lisible par les clients.
+create table public.product_private (product_id uuid primary key references public.products(id) on delete cascade, supplier_url text, supplier_cost_xof integer);
+alter table public.product_private enable row level security;
+create policy "admin seul" on public.product_private for all using (public.is_admin()) with check (public.is_admin());
+
+-- Niveau de paiement écrit par l'admin, visible par le client concerné.
+create table public.payment_notes (user_id uuid primary key references auth.users(id) on delete cascade,
+  level text not null default 'Aucun paiement' check (level in ('Aucun paiement','Acompte reçu','Soldé','À relancer')), note text check (length(note) <= 300), updated_at timestamptz default now());
+alter table public.payment_notes enable row level security;
+create policy "mon niveau" on public.payment_notes for select using (user_id = auth.uid() or public.is_admin());
+create policy "admin écrit niveau" on public.payment_notes for all using (public.is_admin()) with check (public.is_admin());
+
+-- Témoignages : seulement après un achat payé du produit, publiés après validation.
+create table public.testimonials (id uuid primary key default gen_random_uuid(), product_id uuid not null references public.products(id), user_id uuid not null references auth.users(id),
+  rating int not null check (rating between 1 and 5), body text not null check (length(body) between 10 and 600), status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  created_at timestamptz default now(), unique (product_id, user_id));
+alter table public.testimonials enable row level security;
+create policy "témoignages publiés" on public.testimonials for select using (status = 'approved' or user_id = auth.uid() or public.is_admin());
+create policy "admin modère" on public.testimonials for update using (public.is_admin()) with check (public.is_admin());
+create function public.submit_testimonial(p_product uuid, p_rating int, p_body text) returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'connexion requise'; end if;
+  if not exists (select 1 from orders o join order_items i on i.order_id = o.id where o.user_id = auth.uid() and i.product_id = p_product and o.status not in ('pending_payment','cancelled')) then raise exception 'achat payé requis'; end if;
+  insert into testimonials(product_id, user_id, rating, body) values (p_product, auth.uid(), p_rating, left(p_body, 600));
+end $$;
+revoke all on function public.submit_testimonial(uuid, int, text) from public, anon; grant execute on function public.submit_testimonial(uuid, int, text) to authenticated;
+
+-- Messages des clients (préoccupations) : le client voit les siens, l'admin voit tout.
+create table public.support_messages (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id), order_id uuid references public.orders(id),
+  subject text not null check (length(subject) <= 120), body text not null check (length(body) <= 1000), reply text, status text not null default 'Nouveau' check (status in ('Nouveau','En cours','Résolu')), created_at timestamptz default now());
+alter table public.support_messages enable row level security;
+create policy "mes messages" on public.support_messages for select using (user_id = auth.uid() or public.is_admin());
+create policy "écrire un message" on public.support_messages for insert with check (user_id = auth.uid() and status = 'Nouveau' and reply is null);
+create policy "admin répond" on public.support_messages for update using (public.is_admin()) with check (public.is_admin());
+
+-- Annonces affichées en haut du site.
+create table public.announcements (id uuid primary key default gen_random_uuid(), text text not null check (length(text) <= 140), is_active boolean default false, created_at timestamptz default now());
+alter table public.announcements enable row level security;
+create policy "annonces actives" on public.announcements for select using (is_active or public.is_admin());
+create policy "admin annonces" on public.announcements for all using (public.is_admin()) with check (public.is_admin());
+
+-- Temps réel : nouvelles commandes, messages et annonces sans recharger la page (les règles RLS s'appliquent).
+alter publication supabase_realtime add table public.orders, public.support_messages, public.announcements;
