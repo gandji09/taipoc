@@ -26,3 +26,8 @@ Catalogue, fiche produit, panier, commande, FedaPay (la clé secrète reste côt
 - Pendant la démonstration, `/admin` est ouvert à tous (données fictives). Avant le lancement, ajouter `VITE_DEMO_ADMIN=false` dans Vercel pour le fermer, puis le protéger par un vrai rôle administrateur Supabase.
 - Premier administrateur : après inscription, exécuter dans le SQL Editor `update public.profiles set is_admin = true where id = '<id du compte>';`
 - Le statut « paid » ne doit être posé que par le webhook FedaPay (signature, montant et référence vérifiés, traitement unique).
+
+## Administrateur et photos
+1. Supabase > Authentication > Users > Add user (e-mail + mot de passe).
+2. SQL Editor : `update public.profiles set is_admin = true where id = '<id de ce compte>';`
+3. Ouvrir `/admin`, se connecter, puis ajouter catégories et produits avec leurs photos. Les photos vont dans le bucket `product-images`.

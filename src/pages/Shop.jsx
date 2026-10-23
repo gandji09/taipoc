@@ -4,6 +4,7 @@ import { formatXOF, WHATSAPP } from '../lib/supabase.js'
 import { useStore, useProducts } from '../lib/store.jsx'
 import { DEMO_CATS } from '../data/demo.js'
 
+const catNames=items=>{const n=[...new Set(items.map(p=>p.cat).filter(Boolean))];return n.length?n:DEMO_CATS}
 export const Price=({p})=>{const promo=p.old_price_xof>p.price_xof
  return <div className="price">{formatXOF(p.price_xof)} <small>FCFA</small>{promo&&<><span className="badge">−{Math.round((1-p.price_xof/p.old_price_xof)*100)} %</span> <span className="old">{formatXOF(p.old_price_xof)}</span></>}</div>}
 export const Ph=({name})=><div className="ph" role="img" aria-label={'Photo de '+name}><span>{name[0]}</span></div>
@@ -17,11 +18,11 @@ function Grid({items,state}){
 
 export function Home(){const {items,state}=useProducts();const {recent}=useStore();const rv=recent.map(id=>items.find(p=>p.id===id)).filter(Boolean).slice(0,6)
  return <>
- <nav className="cats" aria-label="Catégories">{DEMO_CATS.map(c=><Link key={c} className="cat" to={'/catalogue?cat='+c}><span aria-hidden="true">{c[0]}</span>{c}</Link>)}</nav>
+ <nav className="cats" aria-label="Catégories">{catNames(items).map(c=><Link key={c} className="cat" to={'/catalogue?cat='+c}><span aria-hidden="true">{c[0]}</span>{c}</Link>)}</nav>
  <section className="hero"><h1>Achetez en Chine, payez en FCFA.</h1><p>Mobile Money, suivi de commande et livraison à Cotonou.</p><Link className="btn btn-primary" to="/catalogue">Voir les produits</Link></section>
  <ul className="trust"><li>Paiement Mobile Money</li><li>Suivi de commande</li><li>Assistance WhatsApp</li></ul>
  <section className="section"><div className="section-head"><h2>Produits populaires</h2><Link to="/catalogue">Tout voir</Link></div><Grid items={items.slice(0,10)} state={state}/></section>
- {['Électronique','Mode','Maison'].map(c=>{const L=items.filter(p=>p.cat===c).slice(0,5);return L.length?<section key={c} className="section"><div className="section-head"><h2>{c}</h2><Link to={'/catalogue?cat='+c}>Tout voir</Link></div><Grid items={L} state="ready"/></section>:null})}
+ {catNames(items).slice(0,3).map(c=>{const L=items.filter(p=>p.cat===c).slice(0,5);return L.length?<section key={c} className="section"><div className="section-head"><h2>{c}</h2><Link to={'/catalogue?cat='+c}>Tout voir</Link></div><Grid items={L} state="ready"/></section>:null})}
  {rv.length>0&&<section className="section"><div className="section-head"><h2>Vus récemment</h2></div><Grid items={rv} state="ready"/></section>}
  {items.some(p=>p.is_new)&&<section className="section"><div className="section-head"><h2>Nouveautés</h2><Link to="/catalogue?sort=new">Tout voir</Link></div><Grid items={items.filter(p=>p.is_new).slice(0,10)} state="ready"/></section>}
  <section className="section"><h2 style={{marginBottom:12}}>Comment ça marche</h2><ol className="steps"><li><div><b>Je choisis</b>Je parcours le catalogue.</div></li><li><div><b>Je paie</b>Je règle en Mobile Money.</div></li><li><div><b>TAIPOC commande</b>L’équipe achète auprès du fournisseur.</div></li><li><div><b>Je reçois</b>À domicile ou retrait à l’entreprise.</div></li></ol></section></>}
@@ -32,7 +33,7 @@ export function Catalogue(){const {items,state}=useProducts();const [sp,setSp]=u
  let list=items.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())&&(!cat||p.cat===cat))
  if(sort==='asc')list=[...list].sort((a,b)=>a.price_xof-b.price_xof);if(sort==='desc')list=[...list].sort((a,b)=>b.price_xof-a.price_xof);if(sort==='new')list=list.filter(p=>p.is_new)
  return <><h1 className="ptitle">Catalogue</h1>
- <div className="filters"><label>Catégorie<select value={cat} onChange={e=>set('cat',e.target.value)}><option value="">Toutes</option>{DEMO_CATS.map(c=><option key={c}>{c}</option>)}</select></label>
+ <div className="filters"><label>Catégorie<select value={cat} onChange={e=>set('cat',e.target.value)}><option value="">Toutes</option>{catNames(items).map(c=><option key={c}>{c}</option>)}</select></label>
  <label>Trier par<select value={sort} onChange={e=>set('sort',e.target.value)}><option value="">Pertinence</option><option value="asc">Prix croissant</option><option value="desc">Prix décroissant</option><option value="new">Nouveautés</option></select></label></div>
  <p className="note">{state==='ready'?list.length+' produit(s)'+(q?' pour « '+q+' »':''):''}</p><Grid items={list} state={state}/></>}
 
@@ -46,10 +47,10 @@ export function Product(){const {id}=useParams();const {items,state}=useProducts
  if(!p)return <div className="empty"><p>Ce produit n’existe pas ou n’est plus disponible.</p><Link className="btn btn-primary" to="/catalogue">Retour au catalogue</Link></div>
  const isFav=fav.includes(p.id);const vs=p.variants||[];const variant=v||vs[0]||''
  return <div className="pdp"><Gallery p={p}/>
- <div><h1 style={{fontSize:22}}>{p.name}</h1><Price p={p}/><button className="fav" aria-pressed={isFav} onClick={()=>toggleFav(p.id)}>{isFav?'♥ Dans mes favoris':'♡ Ajouter aux favoris'}</button><div className="pricebox"><div><span>Produit × {q}</span><b>{formatXOF(p.price_xof*q)} FCFA</b></div><div><span>Expédition</span><span>À confirmer avant paiement</span></div><div><span>Délai estimé</span><span>À confirmer</span></div></div>
+ <div><h1 style={{fontSize:22}}>{p.name}</h1><Price p={p}/><button className="fav" aria-pressed={isFav} onClick={()=>toggleFav(p.id)}>{isFav?'♥ Dans mes favoris':'♡ Ajouter aux favoris'}</button><div className="pricebox"><div><span>Produit × {q}</span><b>{formatXOF(p.price_xof*q)} FCFA</b></div><div><span>Expédition</span><span>À confirmer avant paiement</span></div><div><span>Délai estimé</span><span>{p.lead_time_days?p.lead_time_days+' jours (estimation)':'À confirmer'}</span></div></div>
  {vs.length>0&&<fieldset className="opts"><legend>Variante</legend>{vs.map(x=><button key={x} className={'chip'+(x===variant?' on':'')} aria-pressed={x===variant} onClick={()=>setV(x)}>{x}</button>)}</fieldset>}
  <div className="qty"><button aria-label="Moins" onClick={()=>setQ(Math.max(1,q-1))}>−</button><span>{q}</span><button aria-label="Plus" onClick={()=>setQ(q+1)}>+</button></div>
- <button className="btn btn-primary block" onClick={()=>{add(p.id,variant,q);setOk(true)}}>Ajouter au panier</button>
+ <button className="btn btn-primary block" disabled={p.stock_status==='Indisponible'} onClick={()=>{add(p.id,variant,q);setOk(true)}}>{p.stock_status==='Indisponible'?'Indisponible pour le moment':'Ajouter au panier'}</button>
  {ok&&<p role="status" className="okmsg">Ajouté au panier. <Link to="/panier">Voir le panier</Link></p>}
  <div className="deliv" style={{marginTop:16}}><b>Livraison</b><p>Délai estimé : à confirmer par TAIPOC. Livraison à domicile ou retrait à l’entreprise à Cotonou. <Link to="/livraison">Détails</Link></p></div>
  <h2 style={{margin:'20px 0 8px',fontSize:16}}>Description</h2><p>{p.description}</p>{p.specs?.length>0&&<><h2 style={{margin:'20px 0 8px',fontSize:16}}>Caractéristiques</h2><table className="specs"><tbody>{p.specs.map(([k,val])=><tr key={k}><th>{k}</th><td>{val}</td></tr>)}</tbody></table></>}

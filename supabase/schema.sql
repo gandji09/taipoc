@@ -138,3 +138,12 @@ create policy "admin annonces" on public.announcements for all using (public.is_
 
 -- Temps réel : nouvelles commandes, messages et annonces sans recharger la page (les règles RLS s'appliquent).
 alter publication supabase_realtime add table public.orders, public.support_messages, public.announcements;
+
+-- ===== Photos des produits (Supabase Storage) =====
+-- Lecture publique, envoi/modification/suppression réservés aux administrateurs. Taille et formats contrôlés côté serveur.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('product-images', 'product-images', true, 2097152, array['image/jpeg','image/png','image/webp']) on conflict (id) do nothing;
+create policy "images produits publiques" on storage.objects for select using (bucket_id = 'product-images');
+create policy "admin envoie images" on storage.objects for insert with check (bucket_id = 'product-images' and public.is_admin());
+create policy "admin modifie images" on storage.objects for update using (bucket_id = 'product-images' and public.is_admin());
+create policy "admin supprime images" on storage.objects for delete using (bucket_id = 'product-images' and public.is_admin());
