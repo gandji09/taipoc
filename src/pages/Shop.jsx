@@ -18,13 +18,13 @@ function Grid({items,state}){
 export function Home(){const {items,state}=useProducts();const {recent}=useStore();const rv=recent.map(id=>items.find(p=>p.id===id)).filter(Boolean).slice(0,6)
  return <>
  <nav className="cats" aria-label="Catégories">{DEMO_CATS.map(c=><Link key={c} className="cat" to={'/catalogue?cat='+c}><span aria-hidden="true">{c[0]}</span>{c}</Link>)}</nav>
- <section className="hero"><div><h1>Des produits de Chine, payés en Mobile Money.</h1><p>Vous choisissez, vous payez en FCFA, TAIPOC commande pour vous et vous suivez votre colis jusqu’à Cotonou.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div><img src="/img/hero.svg" alt="" width="400" height="240"/></section>
- <ul className="trust"><li>Paiement Mobile Money via FedaPay</li><li>Suivi de commande dans votre compte</li><li>Assistance en français sur WhatsApp</li></ul>
+ <section className="hero"><h1>Achetez en Chine, payez en FCFA.</h1><p>Mobile Money, suivi de commande et livraison à Cotonou.</p><Link className="btn btn-primary" to="/catalogue">Voir les produits</Link></section>
+ <ul className="trust"><li>Paiement Mobile Money</li><li>Suivi de commande</li><li>Assistance WhatsApp</li></ul>
  <section className="section"><div className="section-head"><h2>Produits populaires</h2><Link to="/catalogue">Tout voir</Link></div><Grid items={items.slice(0,10)} state={state}/></section>
+ {['Électronique','Mode','Maison'].map(c=>{const L=items.filter(p=>p.cat===c).slice(0,5);return L.length?<section key={c} className="section"><div className="section-head"><h2>{c}</h2><Link to={'/catalogue?cat='+c}>Tout voir</Link></div><Grid items={L} state="ready"/></section>:null})}
  {rv.length>0&&<section className="section"><div className="section-head"><h2>Vus récemment</h2></div><Grid items={rv} state="ready"/></section>}
  {items.some(p=>p.is_new)&&<section className="section"><div className="section-head"><h2>Nouveautés</h2><Link to="/catalogue?sort=new">Tout voir</Link></div><Grid items={items.filter(p=>p.is_new).slice(0,10)} state="ready"/></section>}
- <section className="section"><h2 style={{marginBottom:12}}>Comment ça marche</h2><ol className="steps"><li><div><b>Je choisis</b>Je parcours le catalogue.</div></li><li><div><b>Je paie</b>Je règle en Mobile Money.</div></li><li><div><b>TAIPOC commande</b>L’équipe achète auprès du fournisseur.</div></li><li><div><b>Je reçois</b>À domicile ou retrait à l’entreprise.</div></li></ol></section>
- <section className="section deliv"><h2>Livraison à Cotonou</h2><p>Livraison à domicile ou retrait à l’entreprise. Les frais et délais sont affichés avant le paiement. <Link to="/livraison">En savoir plus</Link></p></section></>}
+ <section className="section"><h2 style={{marginBottom:12}}>Comment ça marche</h2><ol className="steps"><li><div><b>Je choisis</b>Je parcours le catalogue.</div></li><li><div><b>Je paie</b>Je règle en Mobile Money.</div></li><li><div><b>TAIPOC commande</b>L’équipe achète auprès du fournisseur.</div></li><li><div><b>Je reçois</b>À domicile ou retrait à l’entreprise.</div></li></ol></section></>}
 
 export function Catalogue(){const {items,state}=useProducts();const [sp,setSp]=useSearchParams()
  const q=sp.get('q')||'',cat=sp.get('cat')||'',sort=sp.get('sort')||''

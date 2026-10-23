@@ -10,8 +10,7 @@ const P={"home": "M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z", "gr
 const wa=`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Bonjour TAIPOC, j’ai une question.')}`
 const Logo=()=><Link to="/" className="logo" aria-label="TAIPOC, accueil"><svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#F97316"/><path d="M9 17a7 7 0 0 1 12-4.5M23 15a7 7 0 0 1-12 4.5" fill="none" stroke="#1F2937" strokeWidth="2.4" strokeLinecap="round"/></svg>TAIPOC</Link>
 export default function App(){const {count,user}=useStore();const {items}=useProducts();const nav=useNavigate()
- return <><div className="demobar">Version de démonstration : produits, prix et commandes d’exemple, aucun paiement réel.</div>
- <header className="header"><div className="wrap"><Logo/><nav className="hlinks" aria-label="Liens rapides"><Link to="/aide">Aide</Link><Link to="/favoris">Favoris</Link><Link to={user?'/compte':'/connexion'}>Compte</Link><Link to="/panier">Panier ({count})</Link></nav>
+ return <><header className="header"><div className="wrap"><Logo/><nav className="hlinks" aria-label="Liens rapides"><Link to="/aide">Aide</Link><Link to="/favoris">Favoris</Link><Link to={user?'/compte':'/connexion'}>Compte</Link><Link to="/panier">Panier ({count})</Link></nav>
  <form className="search" role="search" onSubmit={e=>{e.preventDefault();nav('/catalogue?q='+encodeURIComponent(e.target.q.value))}}><label htmlFor="q" className="sr">Rechercher un produit</label><input id="q" name="q" type="search" list="sugg" autoComplete="off" placeholder="Rechercher un produit"/><datalist id="sugg">{items.map(p=><option key={p.id} value={p.name}/>)}</datalist><button aria-label="Lancer la recherche">OK</button></form></div></header>
  <main className="wrap"><Routes>
   <Route path="/" element={<Home/>}/><Route path="/catalogue" element={<Catalogue/>}/><Route path="/produit/:id" element={<Product/>}/>

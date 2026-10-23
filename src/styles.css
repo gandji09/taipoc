@@ -98,3 +98,9 @@ body{background:#fff}
 .pricebox{display:grid;gap:6px;border:1px solid var(--line);border-radius:var(--r-m);padding:12px;margin:8px 0}.pricebox>div{display:flex;justify-content:space-between;gap:12px;font-size:14px}
 .specs{min-width:0;font-size:14px}.specs th{width:40%;color:var(--muted);font-weight:600}
 .form .sum{position:sticky;bottom:64px;box-shadow:0 -4px 12px rgba(31,41,55,.08)}@media(min-width:1024px){.form .sum{bottom:0}}
+/* Accueil épuré. Pour mettre votre image en fond de bannière : remplacez public/img/hero.svg (ou changez --hero-image). */
+:root{--hero-image:url(/img/hero.svg)}
+.hero{display:block;background:var(--orange);min-height:140px;padding:24px 20px;margin:0 0 12px}
+.hero h1{font-size:26px;max-width:14ch}.hero p{max-width:32ch;margin:8px 0 16px}
+.trust{display:flex;gap:16px;overflow-x:auto;border:0;padding:0 0 4px;margin:0 0 8px;font-size:13px;white-space:nowrap}
+@media(min-width:768px){.hero{min-height:240px;padding:48px;background:var(--orange) var(--hero-image) right center/auto 100% no-repeat}.hero h1{font-size:38px;max-width:18ch}.hero p{font-size:18px}}
