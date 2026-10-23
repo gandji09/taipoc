@@ -18,7 +18,7 @@ function Grid({items,state}){
 export function Home(){const {items,state}=useProducts()
  return <>
  <nav className="cats" aria-label="Catégories">{DEMO_CATS.map(c=><Link key={c} className="cat" to={'/catalogue?cat='+c}><span aria-hidden="true">{c[0]}</span>{c}</Link>)}</nav>
- <section className="hero"><h1>Des produits de Chine, payés en Mobile Money.</h1><p>Vous choisissez, vous payez en FCFA, TAIPOC commande pour vous et vous suivez votre colis jusqu’à Cotonou.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></section>
+ <section className="hero"><div><h1>Des produits de Chine, payés en Mobile Money.</h1><p>Vous choisissez, vous payez en FCFA, TAIPOC commande pour vous et vous suivez votre colis jusqu’à Cotonou.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div><img src="/img/hero.svg" alt="" width="400" height="240"/></section>
  <ul className="trust"><li>Paiement Mobile Money via FedaPay</li><li>Suivi de commande dans votre compte</li><li>Assistance en français sur WhatsApp</li></ul>
  <section className="section"><div className="section-head"><h2>Produits populaires</h2><Link to="/catalogue">Tout voir</Link></div><Grid items={items.slice(0,10)} state={state}/></section>
  {items.some(p=>p.is_new)&&<section className="section"><div className="section-head"><h2>Nouveautés</h2><Link to="/catalogue?sort=new">Tout voir</Link></div><Grid items={items.filter(p=>p.is_new).slice(0,10)} state="ready"/></section>}

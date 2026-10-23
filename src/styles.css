@@ -80,3 +80,15 @@ textarea{padding:12px}input:focus,select:focus,textarea:focus{outline:2px solid 
 .tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:480px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}.inline{grid-template-columns:1fr 1fr auto;align-items:end;max-width:none;margin-bottom:16px}
 .bottom a.active{color:var(--orange-text);font-weight:700}
 @media(min-width:768px){.pdp{grid-template-columns:1fr 1fr}}
+/* Fond blanc, rendu application */
+body{background:#fff}
+.demobar{background:#F3F4F6;color:var(--muted);font-size:12px}
+.search{background:#fff;border:1.5px solid #D1D5DB}.cat span{background:#fff;border:1.5px solid var(--line)}
+.hero{background:var(--orange);color:var(--ink);display:grid;gap:12px;align-items:center;padding:20px;overflow:hidden}
+.hero p{color:var(--ink)}.hero img{width:100%;height:auto;border-radius:var(--r-s)}.hero .btn-primary{background:#fff;border-color:#fff}
+.sum,.deliv,.demo,.empty{background:#F9FAFB;border:1px solid var(--line)}
+.card{border-color:var(--line)}.card img,.card .ph,.pimg{background:#fff}
+.bottom{box-shadow:0 -2px 12px rgba(31,41,55,.06);padding-bottom:env(safe-area-inset-bottom)}
+.bottom a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted)}.bottom a.active{color:var(--orange-text)}
+@media(min-width:768px){.hero{grid-template-columns:1.2fr 1fr;padding:32px}}
+@media(min-width:1024px){.bottom{display:none}}
