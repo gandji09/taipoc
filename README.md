@@ -20,3 +20,9 @@ Après votre inscription, passez `is_admin` à `true` dans la table `profiles` p
 
 ## À venir
 Catalogue, fiche produit, panier, commande, FedaPay (la clé secrète reste côté serveur : fonction Supabase ou Vercel), espace client, administration. Les liens du menu pointent vers ces pages pas encore créées.
+
+## Sécurité (à lire avant le backend)
+- Ne jamais mettre la clé `service_role` ni la clé secrète FedaPay dans une variable `VITE_`. Elles vivent seulement dans des fonctions serveur.
+- `VITE_DEMO_ADMIN=true` n'est à utiliser qu'en démonstration. Ne jamais l'activer en production.
+- Premier administrateur : après inscription, exécuter dans le SQL Editor `update public.profiles set is_admin = true where id = '<id du compte>';`
+- Le statut « paid » ne doit être posé que par le webhook FedaPay (signature, montant et référence vérifiés, traitement unique).

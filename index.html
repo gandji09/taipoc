@@ -4,4 +4,5 @@
 <meta name="theme-color" content="#F97316"/>
 <title>TAIPOC – Produits de Chine, payés en Mobile Money</title>
 <link rel="icon" href="/favicon.svg"/><link rel="manifest" href="/manifest.webmanifest"/><link rel="apple-touch-icon" href="/icon-192.png"/></head>
-<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+<style>#splash{position:fixed;inset:0;z-index:999;background:#fff;display:grid;place-content:center;justify-items:center;gap:14px;transition:opacity .4s}#splash.out{opacity:0}#splash svg{animation:tpspin 1.2s linear infinite}#splash b{font:800 26px Sora,Inter,system-ui,sans-serif;letter-spacing:.04em;color:#1F2937}@keyframes tpspin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#splash svg{animation:none}}</style>
+<body><div id="splash" role="status" aria-label="Chargement de TAIPOC"><svg width="84" height="84" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#F97316"/><path d="M9 17a7 7 0 0 1 12-4.5M23 15a7 7 0 0 1-12 4.5" fill="none" stroke="#1F2937" stroke-width="2.4" stroke-linecap="round"/></svg><b>TAIPOC</b></div><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>

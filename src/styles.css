@@ -92,3 +92,9 @@ body{background:#fff}
 .bottom a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted)}.bottom a.active{color:var(--orange-text)}
 @media(min-width:768px){.hero{grid-template-columns:1.2fr 1fr;padding:32px}}
 @media(min-width:1024px){.bottom{display:none}}
+.hero img{display:none}@media(min-width:768px){.hero img{display:block}}
+.thumbs{display:flex;gap:8px;margin-top:8px}.thumbs button{width:56px;height:56px;padding:0;border:2px solid var(--line);border-radius:var(--r-s);background:#fff;overflow:hidden}.thumbs button.on{border-color:var(--orange)}.thumbs img{width:100%;height:100%;object-fit:cover}
+.fav{background:none;border:0;padding:8px 0;font-weight:600;color:var(--ink)}.fav[aria-pressed=true]{color:var(--orange-text)}
+.pricebox{display:grid;gap:6px;border:1px solid var(--line);border-radius:var(--r-m);padding:12px;margin:8px 0}.pricebox>div{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.specs{min-width:0;font-size:14px}.specs th{width:40%;color:var(--muted);font-weight:600}
+.form .sum{position:sticky;bottom:64px;box-shadow:0 -4px 12px rgba(31,41,55,.08)}@media(min-width:1024px){.form .sum{bottom:0}}

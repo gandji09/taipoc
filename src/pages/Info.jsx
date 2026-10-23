@@ -4,7 +4,7 @@ const T='Texte à rédiger et faire valider par TAIPOC avant le lancement.'
 const PAGES={
 'comment-ca-marche':['Comment ça marche',[['Je choisis','Je parcours le catalogue et j’ajoute mes articles au panier.'],['Je paie','Je règle en Mobile Money.'],['TAIPOC commande','L’équipe achète auprès du fournisseur chinois.'],['Je suis et je reçois','Je suis ma commande dans mon compte, puis je la reçois à domicile ou je la retire à l’entreprise.']]],
 'livraison':['Livraison',[['À Cotonou','Livraison à domicile ou retrait à l’entreprise.'],['Frais et délais','Affichés et confirmés avant le paiement. Valeurs à renseigner par TAIPOC.'],['Autres pays','Livraison par cargo prévue lors de l’expansion en Afrique de l’Ouest.']]],
-'retours':['Retours et remboursements',[['Politique','À définir par TAIPOC.'],['Délais','À définir par TAIPOC.']]],
+'retours':['Annulation, retours et remboursements',[['Annuler avant l’achat chez le fournisseur','À définir par TAIPOC.'],['Produit non conforme ou endommagé','À définir par TAIPOC.'],['Colis perdu','À définir par TAIPOC.'],['Délai et mode de remboursement','À définir par TAIPOC.']]],
 'faq':['Questions fréquentes',[['Comment payer ?','En Mobile Money, via FedaPay (à activer).'],['Où suivre ma commande ?','Dans votre compte, rubrique Commandes.'],['Combien de temps pour être livré ?','Le délai estimé est confirmé par TAIPOC avant le paiement.']]],
 'cgv':['Conditions générales de vente',[['',T]]],'confidentialite':['Politique de confidentialité',[['',T]]],'mentions-legales':['Mentions légales',[['',T]]]}
 export function Info({slug}){const p=useParams().slug||slug;const d=PAGES[p]

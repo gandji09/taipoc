@@ -1,6 +1,6 @@
 // DONNÉES DE DÉMONSTRATION : aucun produit, prix, commande ou client réel.
 export const DEMO_CATS=['Mode','Électronique','Maison','Beauté','Enfants','Auto-moto','Outils']
-const mk=(i,name,cat,price,isNew,variants)=>({id:'demo-'+i,image_url:'/img/'+i+'.svg',name:name+' (exemple)',cat,price_xof:price,old_price_xof:null,is_new:isNew,variants,
+const mk=(i,name,cat,price,isNew,variants)=>({id:'demo-'+i,image_url:'/img/'+i+'.svg',images:['/img/'+i+'.svg'],specs:[['Origine','Chine'],['Matière','À renseigner'],['Poids','À renseigner'],['Garantie','À renseigner']],name:name+' (exemple)',cat,price_xof:price,old_price_xof:null,is_new:isNew,variants,
  description:'Description du produit à renseigner par l’équipe TAIPOC dans l’administration.',shipping_note:'Hors frais d’expédition'})
 export const DEMO_PRODUCTS=[
  mk(1,'Écouteurs sans fil','Électronique',8500,true,['Noir','Blanc']),

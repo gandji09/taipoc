@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { DEMO_ORDERS, DEMO_PRODUCTS, DEMO_CLIENTS, STATUS } from '../data/demo.js'
 import { formatXOF } from '../lib/supabase.js'
-export const AdminLayout=()=><><h1 className="ptitle">Administration</h1><p className="note demo">Maquette : l’accès sera protégé par Supabase (is_admin) et les données seront réelles.</p>
- <nav className="tabs" aria-label="Admin">{[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/produits','Produits et prix'],['/admin/clients','Clients']].map(([t,n])=><NavLink key={t} to={t} end>{n}</NavLink>)}</nav><Outlet/></>
+export function AdminLayout(){if(import.meta.env.VITE_DEMO_ADMIN!=='true')return <div className="empty"><h1 className="ptitle">Accès réservé</h1><p>L’administration sera réservée aux comptes administrateurs vérifiés par le serveur.</p></div>
+ return <><h1 className="ptitle">Administration</h1><p className="note demo">Maquette : l’accès sera protégé par Supabase (is_admin) et les données seront réelles.</p>
+ <nav className="tabs" aria-label="Admin">{[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/produits','Produits et prix'],['/admin/clients','Clients']].map(([t,n])=><NavLink key={t} to={t} end>{n}</NavLink>)}</nav><Outlet/></>}
 export const AdminHome=()=><div className="kpis">{[['Commandes à traiter',DEMO_ORDERS.length],['Produits',DEMO_PRODUCTS.length],['Clients',DEMO_CLIENTS.length]].map(([k,v])=><div key={k} className="kpi"><b>{v}</b><span>{k}</span></div>)}</div>
 export function AdminOrders(){const [o,setO]=useState(DEMO_ORDERS)
  return <div className="tw"><table><thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut logistique</th></tr></thead><tbody>{o.map((r,i)=><tr key={r.id}><td>{r.id}</td><td>{r.client}</td><td>{formatXOF(r.total)}</td>
