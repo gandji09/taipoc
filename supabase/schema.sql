@@ -147,3 +147,44 @@ create policy "images produits publiques" on storage.objects for select using (b
 create policy "admin envoie images" on storage.objects for insert with check (bucket_id = 'product-images' and public.is_admin());
 create policy "admin modifie images" on storage.objects for update using (bucket_id = 'product-images' and public.is_admin());
 create policy "admin supprime images" on storage.objects for delete using (bucket_id = 'product-images' and public.is_admin());
+
+-- ===== Livreurs : espace réservé aux comptes inscrits ayant le rôle livreur =====
+alter table public.profiles add column is_driver boolean not null default false;
+create or replace function public.protect_profile() returns trigger language plpgsql security definer set search_path = public as
+$$ begin if auth.uid() is not null and (new.is_admin is distinct from old.is_admin or new.is_driver is distinct from old.is_driver) then raise exception 'rôle non modifiable'; end if; return new; end $$;
+create function public.is_driver() returns boolean language sql stable security definer set search_path = public as
+$$ select coalesce((select is_driver from public.profiles where id = auth.uid()), false) $$;
+
+create table public.deliveries (id uuid primary key default gen_random_uuid(), order_id uuid not null unique references public.orders(id) on delete cascade,
+  driver_id uuid references auth.users(id), status text not null default 'to_assign' check (status in ('to_assign','assigned','out','delivered','failed')),
+  note text check (length(note) <= 300), delivered_at timestamptz, updated_at timestamptz default now());
+-- Code de remise : visible du client seulement, jamais du livreur. Le serveur le vérifie.
+create table public.delivery_codes (delivery_id uuid primary key references public.deliveries(id) on delete cascade, code text not null default lpad((floor(random()*10000))::int::text, 4, '0'));
+alter table public.deliveries enable row level security; alter table public.delivery_codes enable row level security;
+create policy "admin livraisons" on public.deliveries for all using (public.is_admin()) with check (public.is_admin());
+create policy "livreur : mes livraisons" on public.deliveries for select using (driver_id = auth.uid());
+create policy "client : ma livraison" on public.deliveries for select using (exists (select 1 from public.orders o where o.id = order_id and o.user_id = auth.uid()));
+create policy "client : mon code" on public.delivery_codes for select using (exists (select 1 from public.deliveries d join public.orders o on o.id = d.order_id where d.id = delivery_id and o.user_id = auth.uid()));
+-- Le livreur voit la commande (adresse, téléphone, articles) uniquement quand elle lui est confiée.
+create policy "livreur : commande confiée" on public.orders for select using (exists (select 1 from public.deliveries d where d.order_id = orders.id and d.driver_id = auth.uid()));
+create policy "livreur : lignes confiées" on public.order_items for select using (exists (select 1 from public.deliveries d where d.order_id = order_items.order_id and d.driver_id = auth.uid()));
+
+create function public.driver_start(p_delivery uuid) returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_driver() then raise exception 'accès refusé'; end if;
+  update deliveries set status = 'out', updated_at = now() where id = p_delivery and driver_id = auth.uid() and status = 'assigned';
+  if not found then raise exception 'livraison introuvable'; end if;
+end $$;
+create function public.driver_confirm(p_delivery uuid, p_code text) returns void language plpgsql security definer set search_path = public as $$
+declare v_order uuid;
+begin
+  if not public.is_driver() then raise exception 'accès refusé'; end if;
+  select d.order_id into v_order from deliveries d join delivery_codes c on c.delivery_id = d.id
+    where d.id = p_delivery and d.driver_id = auth.uid() and d.status = 'out' and c.code = p_code;
+  if v_order is null then raise exception 'code incorrect'; end if;
+  update deliveries set status = 'delivered', delivered_at = now(), updated_at = now() where id = p_delivery;
+  update orders set status = 'delivered' where id = v_order;
+  insert into order_events(order_id, status, note) values (v_order, 'delivered', 'Remise confirmée avec le code client');
+end $$;
+revoke all on function public.driver_start(uuid), public.driver_confirm(uuid, text) from public, anon;
+grant execute on function public.driver_start(uuid), public.driver_confirm(uuid, text) to authenticated;

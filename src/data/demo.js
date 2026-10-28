@@ -1,5 +1,5 @@
 // DONNÉES DE DÉMONSTRATION : aucun produit, prix, commande ou client réel.
-export const DEMO_CATS=['Mode','Électronique','Maison','Beauté','Enfants','Auto-moto','Outils']
+export const DEMO_CATS=['Mode','Électronique','Électroménager','Maison','Enfants','Beauté','Auto-moto','Outils']
 const mk=(i,name,cat,price,isNew,variants)=>({id:'demo-'+i,image_url:'/img/'+i+'.svg',images:['/img/'+i+'.svg'],specs:[['Origine','Chine'],['Matière','À renseigner'],['Poids','À renseigner'],['Garantie','À renseigner']],name:name+' (exemple)',cat,price_xof:price,old_price_xof:null,is_new:isNew,variants,
  description:'Description du produit à renseigner par l’équipe TAIPOC dans l’administration.',shipping_note:'Hors frais d’expédition'})
 export const DEMO_PRODUCTS=[
@@ -10,7 +10,8 @@ export const DEMO_PRODUCTS=[
  mk(5,'Robe d’été','Mode',9000,true,['S','M','L']),
  mk(6,'Coque de téléphone','Électronique',2000,false,['Standard']),
  mk(7,'Jouet éducatif','Enfants',6000,false,['Standard']),
- mk(8,'Kit d’outils','Outils',18000,false,['Standard'])]
+ mk(8,'Kit d’outils','Outils',18000,false,['Standard']),
+ mk(9,'Mixeur électrique','Électroménager',14000,true,['Standard'])]
 export const STATUS={pending_payment:'En attente de paiement',paid:'Paiement reçu',ordered_supplier:'Commandé auprès du fournisseur',shipped:'Expédié',in_transit:'En transit',arrived_benin:'Arrivé au Bénin',delivered:'Livré',cancelled:'Annulé'}
 export const STEPS=['paid','ordered_supplier','shipped','in_transit','arrived_benin','delivered']
 export const DEMO_ORDERS=[

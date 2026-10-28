@@ -79,6 +79,7 @@ export function Checkout(){const {cart,clear,user,addresses}=useStore();const {i
  <label>Téléphone (Mobile Money)<input type="tel" inputMode="tel" value={f.phone} onChange={on('phone')} aria-invalid={!!e.phone}/>{err(e.phone)}</label>
  <h2>2. Livraison à Cotonou</h2><label className="radio"><input type="radio" checked={f.mode==='home'} onChange={()=>setF({...f,mode:'home'})}/>Livraison à domicile</label>
  <label className="radio"><input type="radio" checked={f.mode==='pickup'} onChange={()=>setF({...f,mode:'pickup'})}/>Retrait à l’entreprise</label>
+ {f.mode==='home'&&<p className="note">À la remise, le livreur vous demandera un code de livraison, visible dans votre commande.</p>}
  {addresses.length>0&&f.mode==='home'&&<label>Adresses enregistrées<select onChange={ev=>setF({...f,addr:ev.target.value})}><option value="">Choisir…</option>{addresses.map(x=><option key={x}>{x}</option>)}</select></label>}
  {f.mode==='home'&&<label>Adresse et repère<textarea rows="3" value={f.addr} onChange={on('addr')} aria-invalid={!!e.addr}/>{err(e.addr)}</label>}
  <h2>3. Paiement</h2>{[['mtn','MTN Mobile Money'],['moov','Moov Money']].map(([k,n])=><label key={k} className="radio"><input type="radio" checked={f.pay===k} onChange={()=>setF({...f,pay:k})}/>{n}</label>)}

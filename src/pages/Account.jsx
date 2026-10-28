@@ -3,12 +3,13 @@ import { Link, NavLink, Outlet, Navigate, useLocation, useNavigate, useParams } 
 import { useStore } from '../lib/store.jsx'
 import { formatXOF, WHATSAPP } from '../lib/supabase.js'
 import { DEMO_ORDERS, STATUS, STEPS } from '../data/demo.js'
+import { isDriver } from '../lib/delivery.js'
 
 export function Auth({mode}){const {login}=useStore();const nav=useNavigate();const loc=useLocation();const [f,setF]=useState({name:'',email:'',pw:''});const [e,setE]=useState({});const [sent,setSent]=useState(false)
  const on=k=>ev=>setF({...f,[k]:ev.target.value})
  const go=ev=>{ev.preventDefault();const x={};if(mode==='register'&&!f.name.trim())x.name='Entrez votre nom complet.';if(!/^\S+@\S+\.\S+$/.test(f.email))x.email='Entrez une adresse e-mail valide.'
   if(mode!=='forgot'&&f.pw.length<8)x.pw='Le mot de passe doit contenir au moins 8 caractères.';setE(x);if(Object.keys(x).length)return
-  if(mode==='forgot')return setSent(true);login({name:f.name||f.email.split('@')[0],email:f.email});nav(loc.state?.from||'/compte')}
+  if(mode==='forgot')return setSent(true);const drv=isDriver(f.email);login({name:f.name||f.email.split('@')[0],email:f.email,driver:drv});nav(loc.state?.from||(drv?'/livreur':'/compte'))}
  const T={login:'Connexion',register:'Créer un compte',forgot:'Mot de passe oublié'}[mode]
  return <form onSubmit={go} noValidate className="form narrow"><h1 className="ptitle">{T}</h1>{loc.state?.from&&<p className="okmsg" role="status">Connectez-vous ou créez un compte pour passer commande.</p>}<p className="note">Version de démonstration : aucun compte réel n’est créé.</p>
  {mode==='register'&&<label>Nom complet<input value={f.name} onChange={on('name')}/>{e.name&&<span className="err" role="alert">{e.name}</span>}</label>}
@@ -28,6 +29,7 @@ export const Orders=()=><><h2>Historique des commandes</h2><OrderList/></>
 export function OrderDetail(){const {id}=useParams();const o=DEMO_ORDERS.find(x=>x.id===id);if(!o)return <div className="empty">Commande introuvable.</div>
  const idx=STEPS.indexOf(o.status)
  return <><h2>Commande {o.id}</h2><Badge s={o.status}/><p className="note demo">Suivi d’exemple. Une étape n’apparaîtra comme terminée que si l’équipe TAIPOC l’a confirmée.</p>
+ <div className="sum"><div><span>Mode de livraison</span><span>À domicile</span></div><div><span>Code de livraison</span><b>4821 (exemple)</b></div><p className="note">Donnez ce code au livreur uniquement à la remise du colis.</p></div>
  <ol className="timeline">{STEPS.map((s,k)=><li key={s} className={k<=idx?'done':''}><b>{STATUS[s]}</b><span className="note">{k<=idx?'Confirmé':'À venir'}</span></li>)}</ol>
  <div className="sum"><div><span>Articles</span><span>{o.items.join(', ')}</span></div><div><span>Total</span><b>{formatXOF(o.total)} FCFA</b></div>
  <a className="btn btn-secondary block" href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Bonjour, question sur la commande '+o.id)}`}>Contacter l’assistance</a></div></>}

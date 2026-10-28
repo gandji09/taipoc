@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { DEMO_ORDERS, DEMO_PRODUCTS, DEMO_CATS, STATUS } from '../data/demo.js'
 import { formatXOF, supabase } from '../lib/supabase.js'
+import { DSTATUS, readDrivers, writeDrivers, readDeliveries, writeDeliveries } from '../lib/delivery.js'
 // Données d'exemple : le backend Supabase remplacera ces tableaux (temps réel via Supabase Realtime).
 const LEVELS=['Aucun paiement','Acompte reçu','Soldé','À relancer']
 const CLIENTS=[{id:1,name:'Client exemple',email:'client1@exemple.com',phone:'+229 00 00 00 00',since:'Exemple',orders:1,paid:8500,level:'Soldé',note:''},
@@ -11,7 +12,7 @@ const PAYST={approved:'Payé',pending:'En attente',declined:'Échoué'}
 const TESTS=[{id:1,product:'Écouteurs sans fil (exemple)',author:'Client exemple',buyer:true,rating:4,text:'Témoignage d’exemple : à valider avant publication.',status:'pending'},
  {id:2,product:'Sac à dos (exemple)',author:'Visiteur exemple',buyer:false,rating:5,text:'Témoignage d’exemple d’un compte sans achat payé.',status:'pending'}]
 const MSGS=[{id:1,from:'Client exemple',subject:'Où en est ma commande ?',body:'Message d’exemple d’un client.',status:'Nouveau',reply:''},{id:2,from:'Cliente exemple',subject:'Puis-je changer l’adresse ?',body:'Message d’exemple.',status:'En cours',reply:''}]
-const TABS=[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/paiements','Paiements'],['/admin/produits','Produits'],['/admin/clients','Clients'],['/admin/temoignages','Témoignages'],['/admin/messages','Messages'],['/admin/annonces','Annonces']]
+const TABS=[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/livreurs','Livreurs'],['/admin/paiements','Paiements'],['/admin/produits','Produits'],['/admin/clients','Clients'],['/admin/temoignages','Témoignages'],['/admin/messages','Messages'],['/admin/annonces','Annonces']]
 
 function AdminLogin(){const [f,setF]=useState({email:'',pw:''});const [err,setErr]=useState('');const [busy,setBusy]=useState(false)
  const go=async ev=>{ev.preventDefault();setBusy(true);setErr('');const {error}=await supabase.auth.signInWithPassword({email:f.email.trim(),password:f.pw});setBusy(false);if(error)setErr('Identifiants incorrects.')}
@@ -119,3 +120,12 @@ export function AdminAnnouncements(){const [a,setA]=useState(()=>{try{return JSO
  return <form className="form" onSubmit={pub}><h2>Bandeau d’annonce</h2><p className="note">S’affiche en haut du site. Dans cette maquette, il apparaît en direct dans un autre onglet ouvert du même navigateur ; en production, chez tous les visiteurs.</p>
  <label>Message (140 caractères max)<input maxLength={140} value={a.text} onChange={e=>setA({...a,text:e.target.value})}/></label><label className="radio"><input type="checkbox" checked={a.active} onChange={e=>setA({...a,active:e.target.checked})}/>Afficher le bandeau</label>
  <button className="btn btn-primary">Publier</button>{ok&&<p className="okmsg" role="status">Publié.</p>}</form>}
+
+export function AdminDrivers(){const [dr,setDr]=useState(readDrivers);const [d,setD]=useState(readDeliveries);const [f,setF]=useState({name:'',phone:'',email:''});const [e,setE]=useState('')
+ const add=ev=>{ev.preventDefault();if(!f.name.trim()||!/^\S+@\S+\.\S+$/.test(f.email))return setE('Indiquez le nom et une adresse e-mail valide.');if(dr.some(x=>x.email.toLowerCase()===f.email.toLowerCase()))return setE('Ce livreur existe déjà.');const n=[...dr,{...f,email:f.email.trim()}];setDr(n);writeDrivers(n);setF({name:'',phone:'',email:''});setE('')}
+ const assign=(id,email)=>{const n=d.map(x=>x.id===id?{...x,driver:email,status:email?'assigned':'to_assign'}:x);setD(n);writeDeliveries(n)}
+ return <><p className="note">Un livreur doit avoir un compte. Dans cette démonstration, il se connecte avec l’e-mail enregistré ici ; en production, vous créerez son compte et lui donnerez le rôle livreur dans Supabase.</p>
+ <form className="form inline" noValidate onSubmit={add} style={{maxWidth:"none"}}><label>Nom<input value={f.name} onChange={ev=>setF({...f,name:ev.target.value})}/></label><label>Téléphone<input type="tel" value={f.phone} onChange={ev=>setF({...f,phone:ev.target.value})}/></label><label>E-mail<input type="email" value={f.email} onChange={ev=>setF({...f,email:ev.target.value})}/></label><button className="btn btn-primary">Ajouter le livreur</button></form>{e&&<span className="err" role="alert">{e}</span>}
+ <h2 style={{margin:'16px 0 8px'}}>Livraisons à domicile</h2><div className="tw"><table><thead><tr><th>Commande</th><th>Client</th><th>Adresse</th><th>Livreur</th><th>Statut</th></tr></thead><tbody>{d.map(x=><tr key={x.id}><td>{x.orderId}</td><td>{x.customer}<br/>{x.phone}</td><td>{x.address}</td>
+ <td><select aria-label={'Livreur '+x.orderId} value={x.driver} onChange={ev=>assign(x.id,ev.target.value)} disabled={x.status==='out'||x.status==='delivered'}><option value="">Non assigné</option>{dr.map(v=><option key={v.email} value={v.email}>{v.name}</option>)}</select></td><td>{DSTATUS[x.status]}</td></tr>)}</tbody></table></div>
+ {dr.length===0&&<p className="note">Ajoutez d’abord un livreur pour pouvoir lui confier des livraisons.</p>}</>}
