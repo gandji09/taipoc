@@ -3,13 +3,14 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { formatXOF, WHATSAPP } from '../lib/supabase.js'
 import { useStore, useProducts } from '../lib/store.jsx'
 import { DEMO_CATS } from '../data/demo.js'
+import { Ico, Parcel, catIcon } from '../lib/icons.jsx'
 
 const catNames=items=>{const n=[...new Set(items.map(p=>p.cat).filter(Boolean))];return n.length?n:DEMO_CATS}
 export const Price=({p})=>{const promo=p.old_price_xof>p.price_xof
  return <div className="price">{formatXOF(p.price_xof)} <small>FCFA</small>{promo&&<><span className="badge">−{Math.round((1-p.price_xof/p.old_price_xof)*100)} %</span> <span className="old">{formatXOF(p.old_price_xof)}</span></>}</div>}
 export const Ph=({name})=><div className="ph" role="img" aria-label={'Photo de '+name}><span>{name[0]}</span></div>
 export function Card({p}){return <Link className="card" to={'/produit/'+p.id}>{p.image_url?<img src={p.image_url} alt={p.name} loading="lazy"/>:<Ph name={p.name}/>}
- <div className="card-body"><div className="card-name">{p.name}</div><Price p={p}/><div className="note">{p.shipping_note||'Hors frais d’expédition'}</div></div></Link>}
+ <div className="card-body"><div className="card-name">{p.name}</div><Price p={p}/>{p.stock_status&&<div className="note">{p.stock_status}</div>}<div className="note">{p.shipping_note||'Hors frais d’expédition'}</div></div></Link>}
 function Grid({items,state}){
  if(state==='loading')return <div className="grid">{[1,2,3,4].map(i=><div key={i} className="skeleton"/>)}</div>
  if(state==='error')return <div className="empty"><p>Le catalogue ne s’est pas chargé. Vérifiez votre connexion.</p><button className="btn btn-secondary" onClick={()=>location.reload()}>Réessayer</button></div>
@@ -18,15 +19,14 @@ function Grid({items,state}){
 
 export function Home(){const {items,state}=useProducts();const {recent}=useStore();const rv=recent.map(id=>items.find(p=>p.id===id)).filter(Boolean).slice(0,6)
  return <>
- <nav className="cats" aria-label="Catégories">{catNames(items).map(c=><Link key={c} className="cat" to={'/catalogue?cat='+c}><span aria-hidden="true">{c[0]}</span>{c}</Link>)}</nav>
- <section className="hero"><h1>Achetez en Chine, payez en FCFA.</h1><p>Mobile Money, suivi de commande et livraison à Cotonou.</p><Link className="btn btn-primary" to="/catalogue">Voir les produits</Link></section>
- <ul className="trust"><li>Paiement Mobile Money</li><li>Suivi de commande</li><li>Assistance WhatsApp</li></ul>
+ <nav className="cats" aria-label="Catégories">{catNames(items).map(c=><Link key={c} className="cat" to={'/catalogue?cat='+encodeURIComponent(c)}><span aria-hidden="true"><Ico n={catIcon(c)} s={26}/></span>{c}</Link>)}</nav>
+ <section className="hero"><div><h1>Achetez en Chine. Payez en FCFA.</h1><p>Commandez facilement, payez en FCFA et suivez vos achats jusqu’à la livraison.</p><Link className="btn btn-primary" to="/catalogue">Découvrir les produits</Link></div><Parcel className="art" size={72}/></section>
+ <ul className="trust"><li><Ico n="phone"/>Paiement Mobile Money</li><li><Ico n="pkg"/>Suivi des commandes</li><li><Ico n="headset"/>Assistance client</li></ul>
  <section className="section"><div className="section-head"><h2>Produits populaires</h2><Link to="/catalogue">Tout voir</Link></div><Grid items={items.slice(0,10)} state={state}/></section>
- {catNames(items).slice(0,3).map(c=>{const L=items.filter(p=>p.cat===c).slice(0,5);return L.length?<section key={c} className="section"><div className="section-head"><h2>{c}</h2><Link to={'/catalogue?cat='+c}>Tout voir</Link></div><Grid items={L} state="ready"/></section>:null})}
+ {catNames(items).slice(0,3).map(c=>{const L=items.filter(p=>p.cat===c).slice(0,6);return L.length?<section key={c} className="section"><div className="section-head"><h2>{c}</h2><Link to={'/catalogue?cat='+encodeURIComponent(c)}>Tout voir</Link></div><Grid items={L} state="ready"/></section>:null})}
  {rv.length>0&&<section className="section"><div className="section-head"><h2>Vus récemment</h2></div><Grid items={rv} state="ready"/></section>}
  {items.some(p=>p.is_new)&&<section className="section"><div className="section-head"><h2>Nouveautés</h2><Link to="/catalogue?sort=new">Tout voir</Link></div><Grid items={items.filter(p=>p.is_new).slice(0,10)} state="ready"/></section>}
  <section className="section"><h2 style={{marginBottom:12}}>Comment ça marche</h2><ol className="steps"><li><div><b>Je choisis</b>Je parcours le catalogue.</div></li><li><div><b>Je paie</b>Je règle en Mobile Money.</div></li><li><div><b>TAIPOC commande</b>L’équipe achète auprès du fournisseur.</div></li><li><div><b>Je reçois</b>À domicile ou retrait à l’entreprise.</div></li></ol></section></>}
-
 export function Catalogue(){const {items,state}=useProducts();const [sp,setSp]=useSearchParams()
  const q=sp.get('q')||'',cat=sp.get('cat')||'',sort=sp.get('sort')||''
  const set=(k,v)=>{const n=new URLSearchParams(sp);v?n.set(k,v):n.delete(k);setSp(n)}
