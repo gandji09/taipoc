@@ -146,3 +146,4 @@ body{font-family:var(--font);padding-bottom:calc(60px + env(safe-area-inset-bott
 @media(min-width:1024px){body{padding-bottom:0}.header .wrap{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"logo search act";gap:16px 24px}
  .hlinks{display:flex;gap:16px;margin-right:8px;font-weight:500}.wa{bottom:16px}}
 @media(min-width:768px){.hero{padding:32px 40px;background:var(--bg2)}.hero h1{font-size:34px}.hero p{font-size:16px}.hero .art{width:140px;height:140px}.trust{font-size:14px}.trust li{flex-direction:row;justify-content:center;text-align:left;padding:14px}}
+.legal{max-width:720px}.legal ul{padding-left:20px;margin:8px 0}.legal li{margin:6px 0}.legal p{margin:8px 0}

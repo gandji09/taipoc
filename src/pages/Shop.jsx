@@ -4,6 +4,7 @@ import { formatXOF, WHATSAPP } from '../lib/supabase.js'
 import { useStore, useProducts } from '../lib/store.jsx'
 import { DEMO_CATS } from '../data/demo.js'
 import { Ico, Parcel, catIcon } from '../lib/icons.jsx'
+import { CGV_VERSION } from './Cgv.jsx'
 
 const catNames=items=>{const n=[...new Set(items.map(p=>p.cat).filter(Boolean))];return n.length?n:DEMO_CATS}
 export const Price=({p})=>{const promo=p.old_price_xof>p.price_xof
@@ -68,10 +69,10 @@ export function Cart(){const {cart,setQty,user}=useStore();const {items}=useProd
 
 const err=(f)=>f?<span className="err" role="alert">{f}</span>:null
 export function Checkout(){const {cart,clear,user,addresses}=useStore();const {items}=useProducts();const nav=useNavigate();const L=lines(cart,items)
- const sub=L.reduce((s,l)=>s+l.p.price_xof*l.qty,0);const [f,setF]=useState({name:user?.name||'',phone:'',mode:'home',addr:'',pay:'mtn'});const [e,setE]=useState({})
+ const sub=L.reduce((s,l)=>s+l.p.price_xof*l.qty,0);const [f,setF]=useState({name:user?.name||'',phone:'',mode:'home',addr:'',pay:'mtn',cgv:false});const [e,setE]=useState({})
  const on=k=>ev=>setF({...f,[k]:ev.target.value})
- const go=ev=>{ev.preventDefault();const x={};if(!f.name.trim())x.name='Entrez votre nom complet.';if(!/^\+?[0-9 ]{8,15}$/.test(f.phone.trim()))x.phone='Entrez un numéro valide, par exemple 01 23 45 67 89.';if(f.mode==='home'&&!f.addr.trim())x.addr='Indiquez votre quartier et un repère pour la livraison.';setE(x)
-  if(!Object.keys(x).length){clear();nav('/commande/confirmation',{state:{total:sub}})}}
+ const go=ev=>{ev.preventDefault();const x={};if(!f.name.trim())x.name='Entrez votre nom complet.';if(!/^\+?[0-9 ]{8,15}$/.test(f.phone.trim()))x.phone='Entrez un numéro valide, par exemple 01 23 45 67 89.';if(!f.cgv)x.cgv='Acceptez les conditions générales de vente pour commander.';if(f.mode==='home'&&!f.addr.trim())x.addr='Indiquez votre quartier et un repère pour la livraison.';setE(x)
+  if(!Object.keys(x).length){clear();nav('/commande/confirmation',{state:{total:sub,cgv:CGV_VERSION}})}}
  if(!L.length)return <div className="empty"><p>Votre panier est vide.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div>
  if(!user)return <Navigate to="/connexion" state={{from:'/commande'}}/>
  return <form onSubmit={go} noValidate className="form"><h1 className="ptitle">Validation de commande</h1>
@@ -85,5 +86,6 @@ export function Checkout(){const {cart,clear,user,addresses}=useStore();const {i
  <h2>3. Paiement</h2>{[['mtn','MTN Mobile Money'],['moov','Moov Money']].map(([k,n])=><label key={k} className="radio"><input type="radio" checked={f.pay===k} onChange={()=>setF({...f,pay:k})}/>{n}</label>)}
  <p className="note">Opérateurs configurables. Paiement via FedaPay non activé dans cette version de démonstration.</p>
  <div className="sum"><div><span>Sous-total</span><b>{formatXOF(sub)} FCFA</b></div><div><span>Frais d’expédition</span><span>À confirmer avant paiement</span></div>
+ <label className="radio"><input type="checkbox" checked={f.cgv} onChange={ev=>setF({...f,cgv:ev.target.checked})} aria-invalid={!!e.cgv}/><span>J’ai lu et j’accepte les <Link to="/cgv" target="_blank" className="lnk">conditions générales de vente</Link>.</span></label>{err(e.cgv)}
  <button className="btn btn-primary block" type="submit">Confirmer la commande</button></div></form>}
 export function Confirmation(){return <div className="empty"><h1 className="ptitle">Commande reçue (démonstration)</h1><p>Aucun paiement n’a été effectué et aucune commande réelle n’a été créée. Avec Supabase et FedaPay, cet écran affichera le numéro de commande et le statut de paiement.</p><Link className="btn btn-primary" to="/commandes">Voir mes commandes</Link></div>}
