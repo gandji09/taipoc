@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { supabase, formatXOF, WHATSAPP } from '../lib/supabase.js'
 import { useStore } from '../lib/store.jsx'
-import { STATUS, STEPS } from '../data/demo.js'
+import { STATUS, STEPS } from '../data/labels.js'
 import { DSTATUS, CSTATUS } from '../lib/delivery.js'
 export function useQuery(fn){const [s,set]=useState({data:null,error:null,loading:true});const ref=useRef(fn);ref.current=fn
  const run=useCallback(async()=>{try{const r=await ref.current();set({data:r.data,error:r.error,loading:false})}catch(e){set({data:null,error:{message:String(e.message||e)},loading:false})}},[])
@@ -139,3 +139,6 @@ export function AdminDeliveriesLive(){const [msg,setMsg]=useState('');const [em,
  {d.map(x=>{const od=x.order_id?O[x.order_id]:null;const dis=['out','delivered','cancelled'].includes(x.status);return <tr key={x.id}><td>{x.kind==='service'?'Service':'Commande'}</td><td>{x.order_id?short(x.order_id):'LIV-'+short(x.id)}</td><td>{nm(x.requester_id||od?.user_id)}<br/>{x.contact_phone||od?.delivery_phone}</td><td>{x.pickup_address&&<>De : {x.pickup_address}<br/>À : </>}{x.dropoff_address||od?.delivery_address}{x.description&&<><br/><span className="note">{x.description}</span></>}</td>
  <td>{x.kind==='service'?<input aria-label={'Tarif LIV-'+short(x.id)} inputMode="numeric" defaultValue={x.fee_xof??''} onBlur={e=>{const v=e.target.value.replace(/\D/g,'');if(v!==String(x.fee_xof??''))act(supabase.from('deliveries').update({fee_xof:v===''?null:+v}).eq('id',x.id))}}/>:'—'}</td>
  <td>{sel(x.driver_id,v=>act(supabase.from('deliveries').update({driver_id:v||null,status:v?'assigned':'to_assign',updated_at:new Date().toISOString()}).eq('id',x.id)),dis,'Livreur '+short(x.id))}</td><td>{DSTATUS[x.status]}</td></tr>})}</tbody></table></div></>})()}</Load>}
+
+export function DeliveryRequest(){const {user}=useStore();if(!user)return <Navigate to="/connexion" state={{from:'/demande-livraison'}}/>
+ return <><h1 className="ptitle">Livraison à la demande</h1><LiveDeliveries/></>}

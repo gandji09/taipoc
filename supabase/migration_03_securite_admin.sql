@@ -1,0 +1,4 @@
+-- Migration 03 : toute action d'administration exige la double authentification (niveau aal2).
+-- Même un mot de passe volé ne suffit plus : la base refuse sans le code à 6 chiffres.
+create or replace function public.is_admin() returns boolean language sql stable security definer set search_path = public as
+$$ select coalesce((select is_admin from public.profiles where id = auth.uid()), false) and coalesce(auth.jwt() ->> 'aal', '') = 'aal2' $$;

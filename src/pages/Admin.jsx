@@ -1,96 +1,76 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { DEMO_ORDERS, DEMO_PRODUCTS, DEMO_CATS, STATUS } from '../data/demo.js'
 import { formatXOF, supabase } from '../lib/supabase.js'
-import { DSTATUS, readDrivers, writeDrivers, readDeliveries, writeDeliveries } from '../lib/delivery.js'
-// Données d'exemple : le backend Supabase remplacera ces tableaux (temps réel via Supabase Realtime).
-const LEVELS=['Aucun paiement','Acompte reçu','Soldé','À relancer']
-const CLIENTS=[{id:1,name:'Client exemple',email:'client1@exemple.com',phone:'+229 00 00 00 00',since:'Exemple',orders:1,paid:8500,level:'Soldé',note:''},
- {id:2,name:'Cliente exemple',email:'client2@exemple.com',phone:'+229 00 00 00 01',since:'Exemple',orders:1,paid:0,level:'Aucun paiement',note:''}]
-const PAYS=[{ref:'EXEMPLE-001',client:'Client exemple',amount:8500,op:'MTN MoMo',status:'approved'},{ref:'EXEMPLE-002',client:'Cliente exemple',amount:24000,op:'Moov Money',status:'pending'},{ref:'EXEMPLE-003',client:'Client exemple',amount:6000,op:'MTN MoMo',status:'declined'}]
-const PAYST={approved:'Payé',pending:'En attente',declined:'Échoué'}
-const TESTS=[{id:1,product:'Écouteurs sans fil (exemple)',author:'Client exemple',buyer:true,rating:4,text:'Témoignage d’exemple : à valider avant publication.',status:'pending'},
- {id:2,product:'Sac à dos (exemple)',author:'Visiteur exemple',buyer:false,rating:5,text:'Témoignage d’exemple d’un compte sans achat payé.',status:'pending'}]
-const MSGS=[{id:1,from:'Client exemple',subject:'Où en est ma commande ?',body:'Message d’exemple d’un client.',status:'Nouveau',reply:''},{id:2,from:'Cliente exemple',subject:'Puis-je changer l’adresse ?',body:'Message d’exemple.',status:'En cours',reply:''}]
-const TABS=[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/livreurs','Livreurs'],['/admin/paiements','Paiements'],['/admin/produits','Produits'],['/admin/clients','Clients'],['/admin/temoignages','Témoignages'],['/admin/messages','Messages'],['/admin/annonces','Annonces']]
-
+const TABS=[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/paiements','Paiements'],['/admin/produits','Produits'],['/admin/clients','Clients'],['/admin/livreurs','Livraisons'],['/admin/messages','Messages'],['/admin/temoignages','Témoignages'],['/admin/annonces','Annonces'],['/admin/securite','Sécurité']]
+const Er=({m})=>m?<span className="err" role="alert">{m}</span>:null
 function AdminLogin(){const [f,setF]=useState({email:'',pw:''});const [err,setErr]=useState('');const [busy,setBusy]=useState(false)
- const go=async ev=>{ev.preventDefault();setBusy(true);setErr('');const {error}=await supabase.auth.signInWithPassword({email:f.email.trim(),password:f.pw});setBusy(false);if(error)setErr('Identifiants incorrects.')}
- return <form className="form narrow" onSubmit={go}><h1 className="ptitle">Connexion administrateur</h1><label>E-mail<input type="email" autoComplete="username" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></label>
- <label>Mot de passe<input type="password" autoComplete="current-password" value={f.pw} onChange={e=>setF({...f,pw:e.target.value})}/></label>{err&&<span className="err" role="alert">{err}</span>}<button className="btn btn-primary block" disabled={busy}>Se connecter</button></form>}
-export function AdminLayout(){const [st,setSt]=useState(supabase?'loading':'demo')
- const check=async()=>{const {data:{session}}=await supabase.auth.getSession();if(!session)return setSt('login');const {data}=await supabase.from('profiles').select('is_admin').eq('id',session.user.id).single();setSt(data?.is_admin?'ok':'denied')}
- useEffect(()=>{if(!supabase)return;check();const {data:{subscription}}=supabase.auth.onAuthStateChange(()=>{check()});return()=>subscription.unsubscribe()},[])
- if(!supabase&&import.meta.env.VITE_DEMO_ADMIN==='false')return <div className="empty"><h1 className="ptitle">Accès réservé</h1><p>Cette page est réservée aux administrateurs.</p></div>
+ const go=async ev=>{ev.preventDefault();setBusy(true);setErr('');const {error}=await supabase.auth.signInWithPassword({email:f.email.trim(),password:f.pw});setBusy(false);if(error)setErr('E-mail ou mot de passe incorrect.')}
+ return <form className="form narrow" onSubmit={go}><h1 className="ptitle">Administration</h1><p className="note">Accès réservé à l’équipe TAIPOC.</p><label>E-mail<input type="email" autoComplete="username" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></label>
+ <label>Mot de passe<input type="password" autoComplete="current-password" value={f.pw} onChange={e=>setF({...f,pw:e.target.value})}/></label><Er m={err}/><button className="btn btn-primary block" disabled={busy}>Se connecter</button></form>}
+function MfaVerify({done}){const [code,setCode]=useState('');const [err,setErr]=useState('')
+ const go=async ev=>{ev.preventDefault();setErr('');const {data:fs}=await supabase.auth.mfa.listFactors();const fac=fs?.totp?.[0];if(!fac)return setErr('Aucun appareil de vérification trouvé.')
+  const {data:ch,error:e1}=await supabase.auth.mfa.challenge({factorId:fac.id});if(e1)return setErr(e1.message);const {error}=await supabase.auth.mfa.verify({factorId:fac.id,challengeId:ch.id,code:code.trim()});if(error)return setErr('Code incorrect ou expiré.');done()}
+ return <form className="form narrow" onSubmit={go}><h1 className="ptitle">Vérification en deux étapes</h1><p>Entrez le code à 6 chiffres affiché par votre application d’authentification.</p><label>Code<input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e=>setCode(e.target.value)}/></label><Er m={err}/><button className="btn btn-primary block">Valider</button>
+ <button type="button" className="lnk" onClick={()=>supabase.auth.signOut()}>Changer de compte</button></form>}
+function MfaEnroll({done}){const [q,setQ]=useState(null);const [code,setCode]=useState('');const [err,setErr]=useState('')
+ useEffect(()=>{(async()=>{const {data:fs}=await supabase.auth.mfa.listFactors();for(const f of (fs?.all||[]))if(f.status==='unverified')await supabase.auth.mfa.unenroll({factorId:f.id})
+  const {data,error}=await supabase.auth.mfa.enroll({factorType:'totp',friendlyName:'TAIPOC '+Date.now()});if(error)return setErr('Activation impossible : '+error.message);setQ(data)})()},[])
+ const go=async ev=>{ev.preventDefault();setErr('');const {data:ch,error:e1}=await supabase.auth.mfa.challenge({factorId:q.id});if(e1)return setErr(e1.message);const {error}=await supabase.auth.mfa.verify({factorId:q.id,challengeId:ch.id,code:code.trim()});if(error)return setErr('Code incorrect ou expiré.');done()}
+ return <form className="form narrow" onSubmit={go}><h1 className="ptitle">Activer la double authentification</h1><p>Obligatoire pour l’administration. 1) Installez Google Authenticator, Microsoft Authenticator ou Authy. 2) Scannez ce code. 3) Entrez le code à 6 chiffres affiché.</p>
+ {q&&<><img src={q.totp.qr_code} alt="Code QR à scanner avec l’application d’authentification" width="200" height="200"/><p className="note">Si vous ne pouvez pas scanner, saisissez cette clé : <b style={{wordBreak:'break-all'}}>{q.totp.secret}</b></p></>}
+ <label>Code à 6 chiffres<input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e=>setCode(e.target.value)}/></label><Er m={err}/><button className="btn btn-primary block" disabled={!q}>Activer</button></form>}
+export function AdminLayout(){const [st,setSt]=useState('loading')
+ const check=async()=>{const {data:{session}}=await supabase.auth.getSession();if(!session)return setSt('login')
+  const {data:p}=await supabase.from('profiles').select('is_admin').eq('id',session.user.id).maybeSingle();if(!p?.is_admin)return setSt('denied')
+  const {data:a}=await supabase.auth.mfa.getAuthenticatorAssuranceLevel();setSt(a.currentLevel==='aal2'?'ok':a.nextLevel==='aal2'?'verify':'enroll')}
+ useEffect(()=>{check();const {data:{subscription}}=supabase.auth.onAuthStateChange(()=>{setTimeout(check,0)});return()=>subscription.unsubscribe()},[])
  if(st==='loading')return <div className="skeleton" style={{height:120}}/>
  if(st==='login')return <AdminLogin/>
+ if(st==='verify')return <MfaVerify done={check}/>
+ if(st==='enroll')return <MfaEnroll done={check}/>
  if(st==='denied')return <div className="empty"><h1 className="ptitle">Accès refusé</h1><p>Ce compte n’est pas administrateur.</p><button className="btn btn-secondary" onClick={()=>supabase.auth.signOut()}>Se déconnecter</button></div>
- return <><h1 className="ptitle">Administration</h1><p className="note demo">{supabase?'Données réelles, actualisées automatiquement toutes les 15 secondes.':'Maquette avec données d’exemple : rien n’est enregistré.'}</p>
- <nav className="tabs" aria-label="Administration">{TABS.map(([t,n])=><NavLink key={t} to={t} end>{n}</NavLink>)}{supabase&&<button className="lnk" onClick={()=>supabase.auth.signOut()}>Déconnexion</button>}</nav><Outlet/></>}
+ return <><h1 className="ptitle">Administration</h1><nav className="tabs" aria-label="Administration">{TABS.map(([t,n])=><NavLink key={t} to={t} end>{n}</NavLink>)}<button className="lnk" onClick={()=>supabase.auth.signOut()}>Déconnexion</button></nav><Outlet/></>}
+export function AdminSecurity(){const [pw,setPw]=useState('');const [m,setM]=useState('')
+ const chg=async ev=>{ev.preventDefault();if(pw.length<12)return setM('Le mot de passe administrateur doit contenir au moins 12 caractères.');const {error}=await supabase.auth.updateUser({password:pw});setM(error?'Changement impossible : '+error.message:'Mot de passe modifié.');if(!error)setPw('')}
+ return <div className="form narrow"><h2>Sécurité du compte</h2><p>Double authentification : <b>active</b>. Elle est exigée par la base de données pour toute action d’administration.</p>
+ <form className="form" onSubmit={chg}><label>Nouveau mot de passe (12 caractères minimum)<input type="password" autoComplete="new-password" value={pw} onChange={e=>setPw(e.target.value)}/></label><button className="btn btn-secondary">Changer le mot de passe</button>{m&&<p role="status" className={m.startsWith('Mot')?'okmsg':'err'}>{m}</p>}</form>
+ <button className="btn btn-secondary" onClick={()=>supabase.auth.signOut({scope:'global'})}>Déconnecter tous mes appareils</button></div>}
 
-export function AdminHome(){
- const k=[['Commandes à traiter',DEMO_ORDERS.filter(o=>o.status!=='delivered').length],['Paiements en attente',PAYS.filter(p=>p.status==='pending').length],['Messages non lus',MSGS.filter(m=>m.status==='Nouveau').length],['Témoignages à valider',TESTS.length],['Clients inscrits',CLIENTS.length],['Demandes de livreur à assigner',readDeliveries().filter(x=>x.kind==='service'&&x.status==='to_assign').length],['Produits',DEMO_PRODUCTS.length]]
- return <><div className="kpis">{k.map(([n,v])=><div key={n} className="kpi"><b>{v}</b><span>{n}</span></div>)}</div>
- <h2 style={{margin:'20px 0 8px'}}>Activité récente (exemple)</h2><ul className="list">{['Nouvelle commande TP-EXEMPLE-2','Paiement MTN MoMo reçu (EXEMPLE-001)','Nouveau message : « Où en est ma commande ? »','Nouveau témoignage à valider'].map(a=><li key={a} className="line">{a}</li>)}</ul>
- <p className="note">En production, cette liste se met à jour toute seule dès qu’une commande, un paiement ou un message arrive.</p></>}
-
-export function AdminOrders(){const [o,setO]=useState(DEMO_ORDERS)
- return <div className="tw"><table><thead><tr><th>N°</th><th>Client</th><th>Articles</th><th>Total</th><th>Statut logistique</th></tr></thead><tbody>{o.map((r,i)=><tr key={r.id}><td>{r.id}</td><td>{r.client}</td><td>{r.items.join(', ')}</td><td>{formatXOF(r.total)}</td>
- <td><select aria-label={'Statut '+r.id} value={r.status} onChange={e=>setO(o.map((x,k)=>k===i?{...x,status:e.target.value}:x))}>{Object.entries(STATUS).filter(([k])=>k!=='paid'&&k!=='pending_payment'||k===r.status).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></td></tr>)}</tbody></table>
- <p className="note">Les statuts « Paiement reçu » et « En attente » sont posés uniquement par la confirmation du paiement, jamais à la main.</p></div>}
-
-export function AdminPayments(){const [f,setF]=useState('')
- const L=PAYS.filter(p=>!f||p.status===f);const total=PAYS.filter(p=>p.status==='approved').reduce((s,p)=>s+p.amount,0)
- return <><div className="filters"><label>Filtrer<select value={f} onChange={e=>setF(e.target.value)}><option value="">Tous</option>{Object.entries(PAYST).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label></div>
- <p><b>Total payé : {formatXOF(total)} FCFA</b></p><div className="tw"><table><thead><tr><th>Référence</th><th>Client</th><th>Montant</th><th>Opérateur</th><th>Statut</th></tr></thead><tbody>{L.map(p=><tr key={p.ref}><td>{p.ref}</td><td>{p.client}</td><td>{formatXOF(p.amount)}</td><td>{p.op}</td><td><span className={'st st-'+(p.status==='approved'?'paid':'')}>{PAYST[p.status]}</span></td></tr>)}</tbody></table></div></>}
-
-const EMPTY={name:'',cat:'',price:'',old:'',variants:'',desc:'',specs:'',images:[],supUrl:'',supCost:'',weight:'',lead:'',stock:'Disponible',ship:'Hors frais d’expédition',active:true,isNew:false,qualified:false}
+const EMPTY={name:'',cat:'',price:'',old:'',variants:'',desc:'',specs:'',images:['','',''],supUrl:'',supCost:'',weight:'',lead:'',stock:'Disponible',ship:'Hors frais d’expédition',active:true,isNew:false,qualified:false}
 const IMG_OK=['image/jpeg','image/png','image/webp']
+const pad=a=>[a?.[0]||'',a?.[1]||'',a?.[2]||'']
 const toForm=(r,pv)=>({...EMPTY,id:r.id,name:r.name,cat:r.category_id||'',price:r.price_xof,old:r.old_price_xof||'',variants:(r.variants||[]).join(', '),desc:r.description||'',specs:(r.specs||[]).map(([k,v])=>k+': '+v).join('\n'),
- images:r.images?.length?r.images:(r.image_url?[r.image_url]:[]),supUrl:pv?.supplier_url||'',supCost:pv?.supplier_cost_xof||'',weight:r.weight_kg||'',lead:r.lead_time_days||'',stock:r.stock_status||'Disponible',ship:r.shipping_note||'',active:r.is_active,isNew:r.is_new,qualified:r.is_qualified})
-const toData=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)})
+ images:pad(r.images?.length?r.images:(r.image_url?[r.image_url]:[])),supUrl:pv?.supplier_url||'',supCost:pv?.supplier_cost_xof||'',weight:r.weight_kg||'',lead:r.lead_time_days||'',stock:r.stock_status||'Disponible',ship:r.shipping_note||'',active:r.is_active,isNew:r.is_new,qualified:r.is_qualified})
 async function shrink(file,max=1200,q=.85){const b=await createImageBitmap(file);const r=Math.min(1,max/Math.max(b.width,b.height));const c=document.createElement('canvas');c.width=Math.round(b.width*r);c.height=Math.round(b.height*r);c.getContext('2d').drawImage(b,0,0,c.width,c.height);return new Promise(res=>c.toBlob(res,'image/webp',q))}
-async function uploadImages(files){const out=[];for(const file of files){
- if(!IMG_OK.includes(file.type))throw new Error('Format non accepté : utilisez JPG, PNG ou WebP.')
- if(file.size>15*1024*1024)throw new Error('Photo trop lourde (15 Mo maximum).')
- if(!supabase){out.push(await toData(await shrink(file,800,.8)));continue}
- const blob=await shrink(file);const path=crypto.randomUUID()+'.webp'
- const {error}=await supabase.storage.from('product-images').upload(path,blob,{contentType:'image/webp',cacheControl:'31536000'});if(error)throw error
- out.push(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)}return out}
-
+async function uploadImage(file){if(!IMG_OK.includes(file.type))throw new Error('Format non accepté : utilisez JPG, PNG ou WebP.');if(file.size>15*1024*1024)throw new Error('Photo trop lourde (15 Mo maximum).')
+ const blob=await shrink(file);const path=crypto.randomUUID()+'.webp';const {error}=await supabase.storage.from('product-images').upload(path,blob,{contentType:'image/webp',cacheControl:'31536000'});if(error)throw error
+ return supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl}
 export function AdminProducts(){
- const [list,setL]=useState(()=>{if(supabase)return [];try{const a=JSON.parse(localStorage.getItem('tp_admin_products'));if(Array.isArray(a))return a}catch{}
-  return DEMO_PRODUCTS.map(p=>({...EMPTY,id:p.id,name:p.name,cat:p.cat,price:p.price_xof,images:p.images||[],isNew:p.is_new,desc:p.description,variants:(p.variants||[]).join(', '),specs:(p.specs||[]).map(([k,v])=>k+': '+v).join('\n')}))})
- const [cats,setCats]=useState(supabase?[]:DEMO_CATS.map(c=>({id:c,name:c})))
- const [f,setF]=useState(EMPTY);const [e,setE]=useState({});const [msg,setMsg]=useState('');const setLP=l=>{setL(l);if(!supabase)try{localStorage.setItem('tp_admin_products',JSON.stringify(l));setMsg('Produit enregistré. Il est visible sur le site.')}catch{setMsg('Mémoire du navigateur pleine : retirez quelques photos.')}};const [busy,setBusy]=useState(false);const [nc,setNc]=useState('')
- const load=async()=>{if(!supabase)return;const [p,c,pr]=await Promise.all([supabase.from('products').select('*').order('created_at',{ascending:false}),supabase.from('categories').select('id,name').order('position'),supabase.from('product_private').select('*')])
+ const [list,setL]=useState([]);const [cats,setCats]=useState([]);const [f,setF]=useState(EMPTY);const [e,setE]=useState({});const [msg,setMsg]=useState('');const [busy,setBusy]=useState(false);const [nc,setNc]=useState('')
+ const load=async()=>{const [p,c,pr]=await Promise.all([supabase.from('products').select('*').order('created_at',{ascending:false}),supabase.from('categories').select('id,name').order('position'),supabase.from('product_private').select('*')])
   if(p.error)return setMsg('Chargement impossible : '+p.error.message);const pv=Object.fromEntries((pr.data||[]).map(x=>[x.product_id,x]));setL(p.data.map(r=>toForm(r,pv[r.id])));setCats(c.data||[])}
  useEffect(()=>{load()},[])
  const on=k=>ev=>setF({...f,[k]:ev.target.type==='checkbox'?ev.target.checked:ev.target.value})
- const pickAt=k=>async ev=>{const file=ev.target.files[0];ev.target.value='';if(!file)return;setBusy(true);setMsg('')
-  try{const [u]=await uploadImages([file]);setF(g=>{const im=[...g.images];im[k]=u;return {...g,images:im.filter(Boolean).slice(0,3)}})}catch(er){setMsg(er.message||'Envoi impossible.')}setBusy(false)}
- const main=i=>setF({...f,images:[f.images[i],...f.images.filter((_,k)=>k!==i)]})
- const save=async ev=>{ev.preventDefault();const x={};if(!f.name.trim())x.name='Indiquez le nom du produit.';if(!(+f.price>0))x.price='Indiquez un prix en FCFA supérieur à 0.';if(f.old&&+f.old<=+f.price)x.old='L’ancien prix doit être supérieur au prix actuel (promotion réelle seulement).';setE(x);if(Object.keys(x).length)return
-  if(!supabase){setLP(f.id?list.map(p=>p.id===f.id?f:p):[{...f,id:'n'+Date.now()},...list]);return setF(EMPTY)}
+ const pick=i=>async ev=>{const file=ev.target.files[0];ev.target.value='';if(!file)return;setBusy(true);setMsg('');try{const u=await uploadImage(file);setF(g=>({...g,images:g.images.map((x,k)=>k===i?u:x)}))}catch(er){setMsg('Erreur : '+(er.message||'envoi impossible'))}setBusy(false)}
+ const clear=i=>setF({...f,images:f.images.map((x,k)=>k===i?'':x)})
+ const save=async ev=>{ev.preventDefault();const x={};if(f.images.slice(1).some(Boolean)&&!f.images[0])x.images='Ajoutez d’abord la photo principale.';if(!f.name.trim())x.name='Indiquez le nom du produit.';if(!(+f.price>0))x.price='Indiquez un prix en FCFA supérieur à 0.';if(f.old&&+f.old<=+f.price)x.old='L’ancien prix doit être supérieur au prix actuel (promotion réelle seulement).';setE(x);if(Object.keys(x).length)return
   setBusy(true);setMsg('')
   const specs=f.specs.split('\n').map(l=>l.split(':')).filter(a=>a[0].trim()&&a[1]).map(a=>[a[0].trim(),a.slice(1).join(':').trim()])
-  const row={name:f.name.trim(),category_id:f.cat||null,description:f.desc||null,price_xof:+f.price,old_price_xof:f.old?+f.old:null,shipping_note:f.ship||null,image_url:f.images[0]||null,images:f.images.slice(0,3),specs,
+  const row={name:f.name.trim(),category_id:f.cat||null,description:f.desc||null,price_xof:+f.price,old_price_xof:f.old?+f.old:null,shipping_note:f.ship||null,image_url:f.images[0]||null,images:f.images.filter(Boolean),specs,
    is_active:f.active,is_new:f.isNew,is_qualified:f.qualified,weight_kg:f.weight?+f.weight:null,lead_time_days:f.lead?+f.lead:null,variants:f.variants.split(',').map(v=>v.trim()).filter(Boolean),stock_status:f.stock}
   const r=f.id?await supabase.from('products').update(row).eq('id',f.id).select('id').single():await supabase.from('products').insert(row).select('id').single()
-  if(r.error){setBusy(false);return setMsg('Enregistrement refusé : '+r.error.message)}
-  await supabase.from('product_private').upsert({product_id:r.data.id,supplier_url:f.supUrl||null,supplier_cost_xof:f.supCost?+f.supCost:null})
-  setBusy(false);setF(EMPTY);setMsg('Produit enregistré. Il est visible sur le site.');load()}
- const toggle=async p=>{if(!supabase)return setLP(list.map(x=>x.id===p.id?{...x,active:!x.active}:x));const {error}=await supabase.from('products').update({is_active:!p.active}).eq('id',p.id);if(error)return setMsg('Action refusée : '+error.message);load()}
- const addCat=async()=>{const name=nc.trim();if(name.length<2)return;if(!supabase){setCats([...cats,{id:name,name}]);return setNc('')}
-  const slug=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');const {error}=await supabase.from('categories').insert({name,slug});if(error)return setMsg('Catégorie refusée : '+error.message);setNc('');load()}
- const field=(k,l,p={})=><label>{l}<input value={f[k]} onChange={on(k)} {...p}/>{e[k]&&<span className="err" role="alert">{e[k]}</span>}</label>
+  if(r.error){setBusy(false);return setMsg('Erreur : enregistrement refusé : '+r.error.message)}
+  const pv=await supabase.from('product_private').upsert({product_id:r.data.id,supplier_url:f.supUrl||null,supplier_cost_xof:f.supCost?+f.supCost:null});if(pv.error){setBusy(false);return setMsg('Erreur : infos internes refusées : '+pv.error.message)}
+  setBusy(false);setF(EMPTY);setMsg('Produit enregistré dans la base. Il est visible sur le site.');load()}
+ const toggle=async p=>{const {error}=await supabase.from('products').update({is_active:!p.active}).eq('id',p.id);if(error)return setMsg('Erreur : '+error.message);load()}
+ const addCat=async()=>{const name=nc.trim();if(name.length<2)return;const slug=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');const {error}=await supabase.from('categories').insert({name,slug});if(error)return setMsg('Erreur : catégorie refusée : '+error.message);setNc('');load()}
+ const field=(k,l,p={})=><label>{l}<input value={f[k]} onChange={on(k)} {...p}/><Er m={e[k]}/></label>
  return <><div className="form inline" style={{maxWidth:720}}><label>Nouvelle catégorie<input value={nc} onChange={ev=>setNc(ev.target.value)} placeholder="Ex. Électroménager"/></label><button type="button" className="btn btn-secondary" onClick={addCat}>Ajouter</button></div>
- {!supabase&&<p className="note demo">Mode démonstration : vos produits et photos sont gardés dans ce navigateur et s’affichent sur le site. <button type="button" className="lnk" onClick={()=>{try{localStorage.removeItem('tp_admin_products')}catch{};location.reload()}}>Rétablir les exemples</button></p>}
  <form className="form" noValidate onSubmit={save} style={{maxWidth:720,marginTop:16}}><h2>{f.id?'Modifier le produit':'Nouveau produit'}</h2>
- <fieldset className="opts"><legend>Photos</legend>
- {[['Photo principale (affichée dans le catalogue)',0],['Photo de détail 1 (facultatif, visible seulement sur la fiche produit)',1],['Photo de détail 2 (facultatif, visible seulement sur la fiche produit)',2]].map(([l,k])=><div key={k} style={{margin:'10px 0'}}><label>{l}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={pickAt(k)} disabled={busy||f.images.length<k}/></label>
-  {f.images[k]&&<div style={{display:'flex',gap:8,alignItems:'center',marginTop:6}}><img src={f.images[k]} alt={l} width="72" height="72" style={{objectFit:'cover',borderRadius:8,border:'1px solid var(--line)'}}/><button type="button" className="lnk" onClick={()=>setF({...f,images:f.images.filter((_,i)=>i!==k)})}>Retirer</button></div>}</div>)}
- <p className="note">JPG, PNG ou WebP, réduites automatiquement. La photo principale s’affiche partout ; les deux photos de détail n’apparaissent que dans la fiche du produit.{!supabase&&' Dans cette démonstration, les photos restent dans ce navigateur.'}</p></fieldset>
+ <fieldset className="opts"><legend>Photos du produit</legend>{[['Photo principale (affichée dans la boutique)',0],['Photo de détail 1 (facultative)',1],['Photo de détail 2 (facultative)',2]].map(([l,i])=><div key={i} style={{display:'flex',gap:12,alignItems:'center',margin:'8px 0'}}>
+  {f.images[i]?<img src={f.images[i]} alt={l} width="72" height="72" style={{objectFit:'cover',borderRadius:8,border:'1px solid var(--line)',flex:'none'}}/>:<div className="ph" style={{width:72,height:72,flex:'none',borderRadius:8}} aria-hidden="true"/>}
+  <label style={{flex:1}}>{l}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={pick(i)} disabled={busy}/></label>{f.images[i]&&<button type="button" className="lnk" onClick={()=>clear(i)}>Retirer</button>}</div>)}
+ <p className="note">Les photos de détail s’affichent seulement sur la fiche du produit. Les photos sont réduites automatiquement pour charger vite sur mobile.</p><Er m={e.images}/></fieldset>
  {field('name','Nom du produit')}<label>Catégorie<select value={f.cat} onChange={on('cat')}><option value="">Choisir…</option>{cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
  {field('price','Prix de vente (FCFA)',{inputMode:'numeric'})}{field('old','Ancien prix, si promotion réelle (FCFA)',{inputMode:'numeric'})}
  {field('variants','Variantes, séparées par des virgules (ex. Noir, Blanc)')}<label>Description<textarea rows="3" value={f.desc} onChange={on('desc')}/></label>
@@ -99,41 +79,7 @@ export function AdminProducts(){
  <label>Disponibilité<select value={f.stock} onChange={on('stock')}><option>Disponible</option><option>Sur commande</option><option>Indisponible</option></select></label>{field('ship','Mention d’expédition affichée sous le prix')}
  <fieldset className="opts"><legend>Informations internes (jamais visibles par les clients)</legend>{field('supUrl','Lien du produit chez le fournisseur')}{field('supCost','Prix d’achat fournisseur (FCFA)',{inputMode:'numeric'})}{f.supCost&&f.price&&<p className="note">Marge estimée : {formatXOF(+f.price-+f.supCost)} FCFA, hors transport.</p>}</fieldset>
  {[['active','Visible dans la boutique'],['isNew','Marquer comme nouveauté'],['qualified','Produit qualifié (vérifié par l’équipe)']].map(([k,l])=><label key={k} className="radio"><input type="checkbox" checked={f[k]} onChange={on(k)}/>{l}</label>)}
- {msg&&<p role="status" className={msg.includes('refusé')||msg.includes('impossible')||msg.includes('Format')||msg.includes('lourde')?'err':'okmsg'}>{msg}</p>}
+ {msg&&<p role="status" className={msg.startsWith('Erreur')?'err':'okmsg'}>{msg}</p>}
  <div style={{display:'flex',gap:8}}><button className="btn btn-primary" disabled={busy}>{busy?'Patientez…':f.id?'Enregistrer':'Ajouter le produit'}</button>{f.id&&<button type="button" className="btn btn-secondary" onClick={()=>setF(EMPTY)}>Annuler</button>}</div></form>
  <div className="tw" style={{marginTop:20}}><table><thead><tr><th>Produit</th><th>Catégorie</th><th>Prix FCFA</th><th>Disponibilité</th><th>Statut</th><th></th></tr></thead><tbody>{list.map(p=><tr key={p.id}><td>{p.name}{p.qualified&&' ✓'}</td><td>{cats.find(c=>c.id===p.cat)?.name||'—'}</td><td>{formatXOF(p.price)}</td><td>{p.stock}</td><td>{p.active?'Visible':'Masqué'}</td>
- <td><button className="lnk" onClick={()=>{setF(p);scrollTo(0,0)}}>Modifier</button><button className="lnk" onClick={()=>toggle(p)}>{p.active?'Masquer':'Afficher'}</button></td></tr>)}</tbody></table></div></>}
-
-export function AdminClients(){const [c,setC]=useState(CLIENTS);const up=(id,k,v)=>setC(c.map(x=>x.id===id?{...x,[k]:v}:x))
- return <><p className="note">Le niveau de paiement et la note sont enregistrés dans le compte du client et visibles par lui.</p><div className="tw"><table><thead><tr><th>Client</th><th>Contact</th><th>Commandes</th><th>Total payé</th><th>Niveau de paiement</th><th>Note pour le client</th></tr></thead><tbody>{c.map(x=><tr key={x.id}><td>{x.name}</td><td>{x.email}<br/>{x.phone}</td><td>{x.orders}</td><td>{formatXOF(x.paid)}</td>
- <td><select aria-label={'Niveau '+x.name} value={x.level} onChange={e=>up(x.id,'level',e.target.value)}>{LEVELS.map(l=><option key={l}>{l}</option>)}</select></td><td><input aria-label={'Note '+x.name} value={x.note} maxLength={300} onChange={e=>up(x.id,'note',e.target.value)} placeholder="Ex. solde de 5 000 FCFA attendu"/></td></tr>)}</tbody></table></div></>}
-
-export function AdminTestimonials(){const [t,setT]=useState(TESTS)
- return <><p className="note">Règle : seuls les clients ayant un achat payé du produit peuvent laisser un témoignage. Rien n’est publié sans votre validation.</p><ul className="list">{t.map(x=><li key={x.id} className="line"><div style={{flex:1}}><b>{x.product}</b> <span className="note">par {x.author} · {'★'.repeat(x.rating)}</span>{x.buyer?<span className="badge">Achat vérifié</span>:<span className="st">Sans achat payé</span>}<p style={{margin:'4px 0'}}>{x.text}</p><span className={'st'+(x.status==='approved'?' st-paid':'')}>{{pending:'À valider',approved:'Publié',rejected:'Refusé'}[x.status]}</span></div>
- <div><button className="lnk" disabled={!x.buyer} onClick={()=>setT(t.map(y=>y.id===x.id?{...y,status:'approved'}:y))}>Publier</button><button className="lnk" onClick={()=>setT(t.map(y=>y.id===x.id?{...y,status:'rejected'}:y))}>Refuser</button></div></li>)}</ul></>}
-
-export function AdminMessages(){const [m,setM]=useState(MSGS);const up=(id,k,v)=>setM(m.map(x=>x.id===id?{...x,[k]:v}:x))
- return <ul className="list">{m.map(x=><li key={x.id} className="line" style={{display:'block'}}><div style={{display:'flex',justifyContent:'space-between',gap:8}}><b>{x.subject}</b><select aria-label={'Statut '+x.subject} value={x.status} onChange={e=>up(x.id,'status',e.target.value)}>{['Nouveau','En cours','Résolu'].map(s=><option key={s}>{s}</option>)}</select></div>
- <p className="note">{x.from}</p><p style={{margin:'4px 0'}}>{x.body}</p><label>Votre réponse<textarea rows="2" value={x.reply} onChange={e=>up(x.id,'reply',e.target.value)}/></label><button className="btn btn-secondary" onClick={()=>up(x.id,'status','Résolu')}>Envoyer et marquer résolu</button></li>)}</ul>}
-
-export function AdminAnnouncements(){const [a,setA]=useState(()=>{try{return JSON.parse(localStorage.getItem('tp_announce'))||{text:'',active:false}}catch{return{text:'',active:false}}});const [ok,setOk]=useState(false)
- const pub=ev=>{ev.preventDefault();try{localStorage.setItem('tp_announce',JSON.stringify(a))}catch{};setOk(true)}
- return <form className="form" onSubmit={pub}><h2>Bandeau d’annonce</h2><p className="note">S’affiche en haut du site. Dans cette maquette, il apparaît en direct dans un autre onglet ouvert du même navigateur ; en production, chez tous les visiteurs.</p>
- <label>Message (140 caractères max)<input maxLength={140} value={a.text} onChange={e=>setA({...a,text:e.target.value})}/></label><label className="radio"><input type="checkbox" checked={a.active} onChange={e=>setA({...a,active:e.target.checked})}/>Afficher le bandeau</label>
- <button className="btn btn-primary">Publier</button>{ok&&<p className="okmsg" role="status">Publié.</p>}</form>}
-
-export function AdminDrivers(){const [dr,setDr]=useState(readDrivers);const [d,setD]=useState(readDeliveries);const [f,setF]=useState({name:'',phone:'',email:''});const [e,setE]=useState('')
- const saveD=n=>{setD(n);writeDeliveries(n)};const up=(id,p)=>saveD(d.map(x=>x.id===id?{...x,...p}:x));const assign=(id,email)=>up(id,{driver:email,status:email?'assigned':'to_assign'})
- const add=ev=>{ev.preventDefault();if(!f.name.trim()||!/^\S+@\S+\.\S+$/.test(f.email))return setE('Indiquez le nom et une adresse e-mail valide.');if(dr.some(x=>x.email.toLowerCase()===f.email.toLowerCase()))return setE('Ce livreur existe déjà.');const n=[...dr,{...f,email:f.email.trim()}];setDr(n);writeDrivers(n);setF({name:'',phone:'',email:''});setE('')}
- const rm=email=>{if(d.some(x=>x.driver===email&&(x.status==='assigned'||x.status==='out')))return setE('Ce livreur a des livraisons en cours.');const n=dr.filter(x=>x.email!==email);setDr(n);writeDrivers(n);setE('')}
- const load=email=>d.filter(x=>x.driver===email&&(x.status==='assigned'||x.status==='out')).length
- const table=(rows,service)=><div className="tw"><table><thead><tr><th>{service?'Demande':'Commande'}</th><th>Client</th><th>{service?'Ramassage → livraison':'Adresse'}</th>{service&&<th>Tarif (FCFA)</th>}<th>Livreur</th><th>Statut</th></tr></thead><tbody>{rows.map(x=><tr key={x.id}>
-  <td>{service?x.id:x.orderId}{service&&<><br/><span className="note">{x.items}</span></>}</td><td>{x.customer}<br/>{x.phone}</td><td>{service?x.pickup+' → '+x.address:x.address}</td>
-  {service&&<td><input aria-label={'Tarif '+x.id} inputMode="numeric" value={x.fee??''} onChange={ev=>up(x.id,{fee:ev.target.value?+ev.target.value:null})}/></td>}
-  <td><select aria-label={'Livreur '+x.id} value={x.driver} onChange={ev=>assign(x.id,ev.target.value)} disabled={['out','delivered','cancelled'].includes(x.status)}><option value="">Non assigné</option>{dr.map(v=><option key={v.email} value={v.email}>{v.name} ({load(v.email)} en cours)</option>)}</select></td><td>{DSTATUS[x.status]}</td></tr>)}</tbody></table></div>
- const svc=d.filter(x=>x.kind==='service');const ord=d.filter(x=>x.kind!=='service')
- return <><p className="note">Un livreur doit avoir un compte. Dans cette démonstration, il se connecte avec l’e-mail enregistré ici ; en production, vous créerez son compte et lui donnerez le rôle livreur dans Supabase.</p>
- <form className="form inline" noValidate onSubmit={add} style={{maxWidth:'none'}}><label>Nom<input value={f.name} onChange={ev=>setF({...f,name:ev.target.value})}/></label><label>Téléphone<input type="tel" value={f.phone} onChange={ev=>setF({...f,phone:ev.target.value})}/></label><label>E-mail<input type="email" value={f.email} onChange={ev=>setF({...f,email:ev.target.value})}/></label><button className="btn btn-primary">Ajouter le livreur</button></form>{e&&<span className="err" role="alert">{e}</span>}
- <h2 style={{margin:'16px 0 8px'}}>Livreurs ({dr.length})</h2>{dr.length===0?<p className="note">Ajoutez d’abord un livreur pour pouvoir lui confier des livraisons.</p>:<ul className="list">{dr.map(v=><li key={v.email} className="line"><span style={{flex:1}}><b>{v.name}</b><br/><span className="note">{v.email} · {v.phone} · {load(v.email)} en cours</span></span><button className="lnk" onClick={()=>rm(v.email)}>Retirer</button></li>)}</ul>}
- <h2 style={{margin:'20px 0 4px'}}>Demandes de livreur (tous les comptes inscrits)</h2><p className="note">Fixez le tarif, puis attribuez un livreur.</p>{svc.length?table(svc,true):<p className="note">Aucune demande pour le moment.</p>}
- <h2 style={{margin:'20px 0 8px'}}>Livraisons de commandes</h2>{table(ord,false)}</>}
+ <td><button className="lnk" onClick={()=>{setF(p);scrollTo(0,0)}}>Modifier</button><button className="lnk" onClick={()=>toggle(p)}>{p.active?'Masquer':'Afficher'}</button></td></tr>)}</tbody></table>{list.length===0&&<p className="note">Aucun produit pour l’instant.</p>}</div></>}

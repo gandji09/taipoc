@@ -3,11 +3,10 @@ import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } 
 import { formatXOF, WHATSAPP, supabase } from '../lib/supabase.js'
 import { ProductReviews } from './Live.jsx'
 import { useStore, useProducts } from '../lib/store.jsx'
-import { DEMO_CATS } from '../data/demo.js'
 import { Ico, Parcel, catIcon } from '../lib/icons.jsx'
 import { CGV_VERSION } from './Cgv.jsx'
 
-const catNames=items=>{const n=[...new Set(items.map(p=>p.cat).filter(Boolean))];return n.length?n:DEMO_CATS}
+const catNames=items=>{const n=[...new Set(items.map(p=>p.cat).filter(Boolean))];return n}
 export const Price=({p})=>{const promo=p.old_price_xof>p.price_xof
  return <div className="price">{formatXOF(p.price_xof)} <small>FCFA</small>{promo&&<><span className="badge">−{Math.round((1-p.price_xof/p.old_price_xof)*100)} %</span> <span className="old">{formatXOF(p.old_price_xof)}</span></>}</div>}
 export const Ph=({name})=><div className="ph" role="img" aria-label={'Photo de '+name}><span>{name[0]}</span></div>
@@ -57,7 +56,7 @@ export function Product(){const {id}=useParams();const {items,state}=useProducts
  {ok&&<p role="status" className="okmsg">Ajouté au panier. <Link to="/panier">Voir le panier</Link></p>}
  <div className="deliv" style={{marginTop:16}}><b>Livraison</b><p>Délai estimé : à confirmer par TAIPOC. Livraison à domicile ou retrait à l’entreprise à Cotonou. <Link to="/livraison">Détails</Link></p></div>
  <h2 style={{margin:'20px 0 8px',fontSize:16}}>Description</h2><p>{p.description}</p>{(p.images||[]).slice(1,3).length>0&&<div className="details">{p.images.slice(1,3).map((s,i)=><img key={s} src={s} alt={p.name+', détail '+(i+1)} loading="lazy"/>)}</div>}{p.specs?.length>0&&<><h2 style={{margin:'20px 0 8px',fontSize:16}}>Caractéristiques</h2><table className="specs"><tbody>{p.specs.map(([k,val])=><tr key={k}><th>{k}</th><td>{val}</td></tr>)}</tbody></table></>}
- {supabase&&<ProductReviews productId={p.id}/>}
+ <ProductReviews productId={p.id}/>
  <a className="btn btn-secondary block" href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Bonjour, une question sur : '+p.name)}`}>Poser une question sur WhatsApp</a></div>
  <section className="section" style={{gridColumn:'1/-1'}}><h2 style={{marginBottom:12}}>Produits similaires</h2><Grid items={items.filter(x=>x.id!==p.id&&x.cat===p.cat).slice(0,5)} state="ready"/></section></div>}
 
@@ -77,7 +76,7 @@ export function Checkout(){const {cart,clear,user,addresses}=useStore();const {i
  const go=async ev=>{ev.preventDefault();const x={};if(!f.name.trim())x.name='Entrez votre nom complet.';if(!/^\+?[0-9 ]{8,15}$/.test(f.phone.trim()))x.phone='Entrez un numéro valide, par exemple 01 23 45 67 89.';if(!f.cgv)x.cgv='Acceptez les conditions générales de vente pour commander.';if(f.mode==='home'&&!f.addr.trim())x.addr='Indiquez votre quartier et un repère pour la livraison.';setE(x);if(Object.keys(x).length)return
   if(supabase){setBusy(true);const {data,error}=await supabase.rpc('create_order',{p_items:L.map(l=>({product_id:l.id,qty:l.qty})),p_mode:f.mode,p_address:f.mode==='home'?f.addr.trim():'Retrait à l’entreprise',p_phone:f.phone.trim()});setBusy(false)
    if(error)return setE({form:'Commande impossible : '+error.message});clear();return nav('/commande/confirmation',{state:{total:sub,cgv:CGV_VERSION,orderId:data}})}
-  clear();nav('/commande/confirmation',{state:{total:sub,cgv:CGV_VERSION}})}
+}
  if(!L.length)return <div className="empty"><p>Votre panier est vide.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div>
  if(!user)return <Navigate to="/connexion" state={{from:'/commande'}}/>
  return <form onSubmit={go} noValidate className="form"><h1 className="ptitle">Validation de commande</h1>
@@ -93,5 +92,5 @@ export function Checkout(){const {cart,clear,user,addresses}=useStore();const {i
  <div className="sum"><div><span>Sous-total</span><b>{formatXOF(sub)} FCFA</b></div><div><span>Frais d’expédition</span><span>À confirmer avant paiement</span></div>
  <label className="radio"><input type="checkbox" checked={f.cgv} onChange={ev=>setF({...f,cgv:ev.target.checked})} aria-invalid={!!e.cgv}/><span>J’ai lu et j’accepte les <Link to="/cgv" target="_blank" className="lnk">conditions générales de vente</Link>.</span></label>{err(e.cgv)}
  {e.form&&<span className="err" role="alert">{e.form}</span>}<button className="btn btn-primary block" type="submit" disabled={busy}>{busy?'Patientez…':'Confirmer la commande'}</button></div></form>}
-export function Confirmation(){const {state}=useLocation();const id=state?.orderId
- return <div className="empty"><h1 className="ptitle">{id?'Commande enregistrée':'Commande reçue (démonstration)'}</h1>{id?<p>Votre commande n° <b>{String(id).slice(0,8).toUpperCase()}</b> est enregistrée. L’équipe TAIPOC confirme votre paiement Mobile Money avant de la traiter, puis vous suivez chaque étape dans votre compte.</p>:<p>Aucun paiement n’a été effectué et aucune commande réelle n’a été créée.</p>}<Link className="btn btn-primary" to="/commandes">Voir mes commandes</Link></div>}
+export function Confirmation(){const {state}=useLocation();const id=state?.orderId;if(!id)return <Navigate to="/commandes" replace/>
+ return <div className="empty"><h1 className="ptitle">Commande enregistrée</h1><p>Votre commande n° <b>{String(id).slice(0,8).toUpperCase()}</b> est enregistrée. L’équipe TAIPOC confirme votre paiement Mobile Money avant de la traiter, puis vous suivez chaque étape dans votre compte.</p><Link className="btn btn-primary" to="/commandes">Voir mes commandes</Link></div>}
