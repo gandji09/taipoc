@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useStore } from '../lib/store.jsx'
 import { CSTATUS, readDeliveries, writeDeliveries, newCode } from '../lib/delivery.js'
-import { formatXOF } from '../lib/supabase.js'
+import { formatXOF, supabase } from '../lib/supabase.js'
+import { LiveDeliveries } from './Live.jsx'
 export function Deliveries(){const {user}=useStore();const [all,setAll]=useState(readDeliveries);const [f,setF]=useState({pickup:'',drop:'',phone:'',what:'',note:''});const [e,setE]=useState({});const [ok,setOk]=useState(false)
  const mine=all.filter(x=>x.kind==='service'&&x.owner===user.email);const on=k=>ev=>setF({...f,[k]:ev.target.value})
  const submit=ev=>{ev.preventDefault();const x={};if(f.pickup.trim().length<8)x.pickup='Indiquez l’adresse de ramassage (quartier et repère).';if(f.drop.trim().length<8)x.drop='Indiquez l’adresse de livraison (quartier et repère).'
@@ -27,4 +28,4 @@ export function Deliveries(){const {user}=useStore();const [all,setAll]=useState
   {x.status==='to_assign'&&<button className="lnk" onClick={()=>cancel(x.id)}>Annuler la demande</button>}</li>)}</ul>}</>}
 
 export function DeliveryRequest(){const {user}=useStore();if(!user)return <Navigate to="/connexion" state={{from:'/demande-livraison'}}/>
- return <><h1 className="ptitle">Livraison à la demande</h1><Deliveries/></>}
+ return <><h1 className="ptitle">Livraison à la demande</h1>{supabase?<LiveDeliveries/>:<Deliveries/>}</>}

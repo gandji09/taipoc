@@ -25,7 +25,7 @@ export function AdminLayout(){const [st,setSt]=useState(supabase?'loading':'demo
  if(st==='loading')return <div className="skeleton" style={{height:120}}/>
  if(st==='login')return <AdminLogin/>
  if(st==='denied')return <div className="empty"><h1 className="ptitle">Accès refusé</h1><p>Ce compte n’est pas administrateur.</p><button className="btn btn-secondary" onClick={()=>supabase.auth.signOut()}>Se déconnecter</button></div>
- return <><h1 className="ptitle">Administration</h1><p className="note demo">{supabase?'Produits, catégories et photos : données réelles. Les autres rubriques affichent encore des exemples.':'Maquette avec données d’exemple : rien n’est enregistré.'}</p>
+ return <><h1 className="ptitle">Administration</h1><p className="note demo">{supabase?'Données réelles, actualisées automatiquement toutes les 15 secondes.':'Maquette avec données d’exemple : rien n’est enregistré.'}</p>
  <nav className="tabs" aria-label="Administration">{TABS.map(([t,n])=><NavLink key={t} to={t} end>{n}</NavLink>)}{supabase&&<button className="lnk" onClick={()=>supabase.auth.signOut()}>Déconnexion</button>}</nav><Outlet/></>}
 
 export function AdminHome(){

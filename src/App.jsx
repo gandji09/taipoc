@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
-import { WHATSAPP } from './lib/supabase.js'
+import { WHATSAPP, supabase } from './lib/supabase.js'
+import { LiveDashboard, LiveOrders, LiveOrderDetail, LiveSupport, DriverLive, AdminHomeLive, AdminOrdersLive, AdminPaymentsLive, AdminClientsLive, AdminTestimonialsLive, AdminMessagesLive, AdminAnnouncementsLive, AdminDeliveriesLive } from './pages/Live.jsx'
+const S=!!supabase
 import { useStore, useProducts } from './lib/store.jsx'
 import { Ico, Parcel } from './lib/icons.jsx'
 import { Home, Catalogue, Product, Cart, Checkout, Confirmation, Favorites } from './pages/Shop.jsx'
 import { Auth, AccountLayout, Dashboard, Orders, OrderDetail, Addresses, Profile, Support } from './pages/Account.jsx'
 import { Info } from './pages/Info.jsx'
+import { Diag } from './pages/Diag.jsx'
 import { DriverApp } from './pages/Driver.jsx'
 import { DeliveryRequest } from './pages/Service.jsx'
 import { AdminLayout, AdminHome, AdminOrders, AdminDrivers, AdminPayments, AdminProducts, AdminClients, AdminTestimonials, AdminMessages, AdminAnnouncements } from './pages/Admin.jsx'
 const wa=`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Bonjour TAIPOC, j’ai une question.')}`
 const Logo=()=><Link to="/" className="logo" aria-label="TAIPOC, accueil"><Parcel size={30}/>TAIPOC</Link>
-function Announce(){const [a,setA]=useState(()=>{try{return JSON.parse(localStorage.getItem('tp_announce'))}catch{return null}})
- useEffect(()=>{const f=e=>{if(e.key==='tp_announce'){try{setA(JSON.parse(e.newValue))}catch{setA(null)}}};addEventListener('storage',f);return()=>removeEventListener('storage',f)},[])
+function Announce(){const [a,setA]=useState(()=>{if(supabase)return null;try{return JSON.parse(localStorage.getItem('tp_announce'))}catch{return null}})
+ useEffect(()=>{if(supabase){const g=async()=>{const {data}=await supabase.from('announcements').select('text').eq('is_active',true).order('created_at',{ascending:false}).limit(1);setA(data?.[0]?{active:true,text:data[0].text}:null)};g();const t=setInterval(()=>{if(!document.hidden)g()},30000);return()=>clearInterval(t)}
+  const f=e=>{if(e.key==='tp_announce'){try{setA(JSON.parse(e.newValue))}catch{setA(null)}}};addEventListener('storage',f);return()=>removeEventListener('storage',f)},[])
  return a?.active&&a.text?<div className="announce" role="status">{a.text}</div>:null}
 export default function App(){const {count,user}=useStore();const {items}=useProducts();const nav=useNavigate();const [hide,setHide]=useState(false)
  useEffect(()=>{let y=scrollY;const f=()=>{const n=scrollY;setHide(n>y&&n>120);y=n};addEventListener('scroll',f,{passive:true});return()=>removeEventListener('scroll',f)},[])
@@ -28,9 +32,9 @@ export default function App(){const {count,user}=useStore();const {items}=usePro
   <Route path="/" element={<Home/>}/><Route path="/catalogue" element={<Catalogue/>}/><Route path="/produit/:id" element={<Product/>}/>
   <Route path="/favoris" element={<Favorites/>}/><Route path="/panier" element={<Cart/>}/><Route path="/commande" element={<Checkout/>}/><Route path="/commande/confirmation" element={<Confirmation/>}/>
   <Route path="/connexion" element={<Auth mode="login"/>}/><Route path="/inscription" element={<Auth mode="register"/>}/><Route path="/mot-de-passe-oublie" element={<Auth mode="forgot"/>}/>
-  <Route element={<AccountLayout/>}><Route path="/compte" element={<Dashboard/>}/><Route path="/commandes" element={<Orders/>}/><Route path="/commandes/:id" element={<OrderDetail/>}/><Route path="/adresses" element={<Addresses/>}/><Route path="/profil" element={<Profile/>}/><Route path="/assistance" element={<Support/>}/></Route>
-  <Route path="/livreur" element={<DriverApp/>}/><Route path="/demande-livraison" element={<DeliveryRequest/>}/><Route path="/aide" element={<Info slug="comment-ca-marche"/>}/><Route path="/contact" element={<Info slug="contact"/>}/><Route path="/:slug" element={<Info/>}/>
-  <Route path="/admin" element={<AdminLayout/>}><Route index element={<AdminHome/>}/><Route path="commandes" element={<AdminOrders/>}/><Route path="livreurs" element={<AdminDrivers/>}/><Route path="paiements" element={<AdminPayments/>}/><Route path="produits" element={<AdminProducts/>}/><Route path="clients" element={<AdminClients/>}/><Route path="temoignages" element={<AdminTestimonials/>}/><Route path="messages" element={<AdminMessages/>}/><Route path="annonces" element={<AdminAnnouncements/>}/></Route>
+  <Route element={<AccountLayout/>}><Route path="/compte" element={S?<LiveDashboard/>:<Dashboard/>}/><Route path="/commandes" element={S?<LiveOrders/>:<Orders/>}/><Route path="/commandes/:id" element={S?<LiveOrderDetail/>:<OrderDetail/>}/><Route path="/adresses" element={<Addresses/>}/><Route path="/profil" element={<Profile/>}/><Route path="/assistance" element={S?<LiveSupport/>:<Support/>}/></Route>
+  <Route path="/diagnostic" element={<Diag/>}/><Route path="/livreur" element={S?<DriverLive/>:<DriverApp/>}/><Route path="/demande-livraison" element={<DeliveryRequest/>}/><Route path="/aide" element={<Info slug="comment-ca-marche"/>}/><Route path="/contact" element={<Info slug="contact"/>}/><Route path="/:slug" element={<Info/>}/>
+  <Route path="/admin" element={<AdminLayout/>}><Route index element={S?<AdminHomeLive/>:<AdminHome/>}/><Route path="commandes" element={S?<AdminOrdersLive/>:<AdminOrders/>}/><Route path="livreurs" element={S?<AdminDeliveriesLive/>:<AdminDrivers/>}/><Route path="paiements" element={S?<AdminPaymentsLive/>:<AdminPayments/>}/><Route path="produits" element={<AdminProducts/>}/><Route path="clients" element={S?<AdminClientsLive/>:<AdminClients/>}/><Route path="temoignages" element={S?<AdminTestimonialsLive/>:<AdminTestimonials/>}/><Route path="messages" element={S?<AdminMessagesLive/>:<AdminMessages/>}/><Route path="annonces" element={S?<AdminAnnouncementsLive/>:<AdminAnnouncements/>}/></Route>
  </Routes></main>
  <footer className="footer"><div className="wrap"><div><Logo/><p>Marketplace de produits de Chine pour l’Afrique de l’Ouest. Lancement à Cotonou, Bénin.</p></div>
  <div><Link to="/comment-ca-marche">Comment ça marche</Link><Link to="/livraison">Livraison</Link><Link to="/retours">Retours</Link><Link to="/livreur">Espace livreur</Link><Link to="/demande-livraison">Demander un livreur</Link></div>
