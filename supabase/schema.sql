@@ -161,13 +161,18 @@ create table public.deliveries (id uuid primary key default gen_random_uuid(), o
 -- Code de remise : visible du client seulement, jamais du livreur. Le serveur le vérifie.
 create table public.delivery_codes (delivery_id uuid primary key references public.deliveries(id) on delete cascade, code text not null default lpad((floor(random()*10000))::int::text, 4, '0'));
 alter table public.deliveries enable row level security; alter table public.delivery_codes enable row level security;
+-- Fonctions d'aide (security definer) : évitent une récursion infinie entre les règles de orders et de deliveries.
+create function public.owns_order(p uuid) returns boolean language sql stable security definer set search_path = public as
+$$ select exists (select 1 from public.orders where id = p and user_id = auth.uid()) $$;
+create function public.drives_order(p uuid) returns boolean language sql stable security definer set search_path = public as
+$$ select exists (select 1 from public.deliveries where order_id = p and driver_id = auth.uid()) $$;
 create policy "admin livraisons" on public.deliveries for all using (public.is_admin()) with check (public.is_admin());
 create policy "livreur : mes livraisons" on public.deliveries for select using (driver_id = auth.uid());
-create policy "client : ma livraison" on public.deliveries for select using (exists (select 1 from public.orders o where o.id = order_id and o.user_id = auth.uid()));
-create policy "client : mon code" on public.delivery_codes for select using (exists (select 1 from public.deliveries d join public.orders o on o.id = d.order_id where d.id = delivery_id and o.user_id = auth.uid()));
+create policy "client : ma livraison" on public.deliveries for select using (public.owns_order(order_id));
+create policy "client : mon code" on public.delivery_codes for select using (exists (select 1 from public.deliveries d where d.id = delivery_id and public.owns_order(d.order_id)));
 -- Le livreur voit la commande (adresse, téléphone, articles) uniquement quand elle lui est confiée.
-create policy "livreur : commande confiée" on public.orders for select using (exists (select 1 from public.deliveries d where d.order_id = orders.id and d.driver_id = auth.uid()));
-create policy "livreur : lignes confiées" on public.order_items for select using (exists (select 1 from public.deliveries d where d.order_id = order_items.order_id and d.driver_id = auth.uid()));
+create policy "livreur : commande confiée" on public.orders for select using (public.drives_order(id));
+create policy "livreur : lignes confiées" on public.order_items for select using (public.drives_order(order_id));
 
 create function public.driver_start(p_delivery uuid) returns void language plpgsql security definer set search_path = public as $$
 begin
@@ -188,3 +193,51 @@ begin
 end $$;
 revoke all on function public.driver_start(uuid), public.driver_confirm(uuid, text) from public, anon;
 grant execute on function public.driver_start(uuid), public.driver_confirm(uuid, text) to authenticated;
+
+-- ===== Service de livraison ouvert à tout compte inscrit (sans achat chez TAIPOC) =====
+alter table public.deliveries alter column order_id drop not null;
+alter table public.deliveries add column kind text not null default 'order' check (kind in ('order','service')),
+  add column requester_id uuid references auth.users(id), add column pickup_address text check (length(pickup_address) <= 300),
+  add column dropoff_address text check (length(dropoff_address) <= 300), add column description text check (length(description) <= 300),
+  add column contact_phone text check (length(contact_phone) <= 20), add column fee_xof integer check (fee_xof is null or fee_xof >= 0);
+alter table public.deliveries add constraint delivery_kind_ok check ((kind = 'order' and order_id is not null) or (kind = 'service' and requester_id is not null));
+alter table public.deliveries drop constraint deliveries_status_check;
+alter table public.deliveries add constraint deliveries_status_check check (status in ('to_assign','assigned','out','delivered','failed','cancelled'));
+create policy "demandeur : ma demande" on public.deliveries for select using (requester_id = auth.uid());
+create policy "demandeur : mon code" on public.delivery_codes for select using (exists (select 1 from public.deliveries d where d.id = delivery_id and d.requester_id = auth.uid()));
+
+create function public.request_delivery(p_pickup text, p_dropoff text, p_desc text, p_phone text) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
+begin
+  if auth.uid() is null then raise exception 'connexion requise'; end if;
+  if length(trim(coalesce(p_pickup,''))) < 5 or length(trim(coalesce(p_dropoff,''))) < 5 or length(trim(coalesce(p_desc,''))) < 3 then raise exception 'informations incomplètes'; end if;
+  if (select count(*) from deliveries where requester_id = auth.uid() and status in ('to_assign','assigned','out')) >= 5 then raise exception 'trop de demandes en cours'; end if;
+  insert into deliveries(kind, requester_id, pickup_address, dropoff_address, description, contact_phone)
+    values ('service', auth.uid(), left(p_pickup, 300), left(p_dropoff, 300), left(p_desc, 300), left(p_phone, 20)) returning id into v_id;
+  insert into delivery_codes(delivery_id) values (v_id);
+  return v_id;
+end $$;
+create function public.cancel_delivery_request(p_id uuid) returns void language plpgsql security definer set search_path = public as $$
+begin
+  update deliveries set status = 'cancelled', updated_at = now() where id = p_id and requester_id = auth.uid() and status = 'to_assign';
+  if not found then raise exception 'annulation impossible'; end if;
+end $$;
+revoke all on function public.request_delivery(text, text, text, text), public.cancel_delivery_request(uuid) from public, anon;
+grant execute on function public.request_delivery(text, text, text, text), public.cancel_delivery_request(uuid) to authenticated;
+
+-- Confirmation de remise : fonctionne pour les commandes et pour les demandes de service.
+create or replace function public.driver_confirm(p_delivery uuid, p_code text) returns void language plpgsql security definer set search_path = public as $$
+declare v_order uuid; v_ok boolean;
+begin
+  if not public.is_driver() then raise exception 'accès refusé'; end if;
+  select true, d.order_id into v_ok, v_order from deliveries d join delivery_codes c on c.delivery_id = d.id
+    where d.id = p_delivery and d.driver_id = auth.uid() and d.status = 'out' and c.code = p_code;
+  if v_ok is null then raise exception 'code incorrect'; end if;
+  update deliveries set status = 'delivered', delivered_at = now(), updated_at = now() where id = p_delivery;
+  if v_order is not null then
+    update orders set status = 'delivered' where id = v_order;
+    insert into order_events(order_id, status, note) values (v_order, 'delivered', 'Remise confirmée avec le code client');
+  end if;
+end $$;
+

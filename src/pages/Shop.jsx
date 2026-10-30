@@ -23,6 +23,7 @@ export function Home(){const {items,state}=useProducts();const {recent}=useStore
  <nav className="cats" aria-label="Catégories">{catNames(items).map(c=><Link key={c} className="cat" to={'/catalogue?cat='+encodeURIComponent(c)}><span aria-hidden="true"><Ico n={catIcon(c)} s={26}/></span>{c}</Link>)}</nav>
  <section className="hero"><div><h1>Achetez en Chine. Payez en FCFA.</h1><p>Commandez facilement, payez en FCFA et suivez vos achats jusqu’à la livraison.</p><Link className="btn btn-primary" to="/catalogue">Découvrir les produits</Link></div><Parcel className="art" size={72}/></section>
  <ul className="trust"><li><Ico n="phone"/>Paiement Mobile Money</li><li><Ico n="pkg"/>Suivi des commandes</li><li><Ico n="headset"/>Assistance client</li></ul>
+ <Link className="svc" to="/demande-livraison"><Ico n="box" s={24}/><span><b>Besoin d’un livreur ?</b> Demandez-en un, même sans acheter chez nous.</span></Link>
  <section className="section"><div className="section-head"><h2>Produits populaires</h2><Link to="/catalogue">Tout voir</Link></div><Grid items={items.slice(0,10)} state={state}/></section>
  {catNames(items).slice(0,3).map(c=>{const L=items.filter(p=>p.cat===c).slice(0,6);return L.length?<section key={c} className="section"><div className="section-head"><h2>{c}</h2><Link to={'/catalogue?cat='+encodeURIComponent(c)}>Tout voir</Link></div><Grid items={L} state="ready"/></section>:null})}
  {rv.length>0&&<section className="section"><div className="section-head"><h2>Vus récemment</h2></div><Grid items={rv} state="ready"/></section>}
@@ -38,8 +39,8 @@ export function Catalogue(){const {items,state}=useProducts();const [sp,setSp]=u
  <label>Trier par<select value={sort} onChange={e=>set('sort',e.target.value)}><option value="">Pertinence</option><option value="asc">Prix croissant</option><option value="desc">Prix décroissant</option><option value="new">Nouveautés</option></select></label></div>
  <p className="note">{state==='ready'?list.length+' produit(s)'+(q?' pour « '+q+' »':''):''}</p><Grid items={list} state={state}/></>}
 
-function Gallery({p}){const imgs=p.images?.length?p.images:p.image_url?[p.image_url]:[];const [i,setI]=useState(0)
- return <div>{imgs.length?<img className="pimg" src={imgs[i]} alt={p.name+', photo '+(i+1)}/>:<Ph name={p.name}/>}{imgs.length>1&&<div className="thumbs">{imgs.map((s,k)=><button key={k} aria-label={'Photo '+(k+1)} className={k===i?'on':''} onClick={()=>setI(k)}><img src={s} alt=""/></button>)}</div>}</div>}
+function Gallery({p}){const src=p.images?.[0]||p.image_url
+ return <div>{src?<img className="pimg" src={src} alt={p.name}/>:<Ph name={p.name}/>}</div>}
 export function Favorites(){const {fav}=useStore();const {items,state}=useProducts();const L=items.filter(p=>fav.includes(p.id))
  return <><h1 className="ptitle">Mes favoris</h1>{L.length?<Grid items={L} state={state}/>:<div className="empty"><p>Aucun favori pour l’instant. Touchez le cœur sur un produit pour le retrouver ici.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div>}</>}
 export function Product(){const {id}=useParams();const {items,state}=useProducts();const {add}=useStore();const nav=useNavigate()
@@ -54,7 +55,7 @@ export function Product(){const {id}=useParams();const {items,state}=useProducts
  <button className="btn btn-primary block" disabled={p.stock_status==='Indisponible'} onClick={()=>{add(p.id,variant,q);setOk(true)}}>{p.stock_status==='Indisponible'?'Indisponible pour le moment':'Ajouter au panier'}</button>
  {ok&&<p role="status" className="okmsg">Ajouté au panier. <Link to="/panier">Voir le panier</Link></p>}
  <div className="deliv" style={{marginTop:16}}><b>Livraison</b><p>Délai estimé : à confirmer par TAIPOC. Livraison à domicile ou retrait à l’entreprise à Cotonou. <Link to="/livraison">Détails</Link></p></div>
- <h2 style={{margin:'20px 0 8px',fontSize:16}}>Description</h2><p>{p.description}</p>{p.specs?.length>0&&<><h2 style={{margin:'20px 0 8px',fontSize:16}}>Caractéristiques</h2><table className="specs"><tbody>{p.specs.map(([k,val])=><tr key={k}><th>{k}</th><td>{val}</td></tr>)}</tbody></table></>}
+ <h2 style={{margin:'20px 0 8px',fontSize:16}}>Description</h2><p>{p.description}</p>{(p.images||[]).slice(1,3).length>0&&<div className="details">{p.images.slice(1,3).map((s,i)=><img key={s} src={s} alt={p.name+', détail '+(i+1)} loading="lazy"/>)}</div>}{p.specs?.length>0&&<><h2 style={{margin:'20px 0 8px',fontSize:16}}>Caractéristiques</h2><table className="specs"><tbody>{p.specs.map(([k,val])=><tr key={k}><th>{k}</th><td>{val}</td></tr>)}</tbody></table></>}
  <a className="btn btn-secondary block" href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Bonjour, une question sur : '+p.name)}`}>Poser une question sur WhatsApp</a></div>
  <section className="section" style={{gridColumn:'1/-1'}}><h2 style={{marginBottom:12}}>Produits similaires</h2><Grid items={items.filter(x=>x.id!==p.id&&x.cat===p.cat).slice(0,5)} state="ready"/></section></div>}
 

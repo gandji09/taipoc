@@ -7,6 +7,7 @@ import { Home, Catalogue, Product, Cart, Checkout, Confirmation, Favorites } fro
 import { Auth, AccountLayout, Dashboard, Orders, OrderDetail, Addresses, Profile, Support } from './pages/Account.jsx'
 import { Info } from './pages/Info.jsx'
 import { DriverApp } from './pages/Driver.jsx'
+import { DeliveryRequest } from './pages/Service.jsx'
 import { AdminLayout, AdminHome, AdminOrders, AdminDrivers, AdminPayments, AdminProducts, AdminClients, AdminTestimonials, AdminMessages, AdminAnnouncements } from './pages/Admin.jsx'
 const wa=`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Bonjour TAIPOC, j’ai une question.')}`
 const Logo=()=><Link to="/" className="logo" aria-label="TAIPOC, accueil"><Parcel size={30}/>TAIPOC</Link>
@@ -28,11 +29,11 @@ export default function App(){const {count,user}=useStore();const {items}=usePro
   <Route path="/favoris" element={<Favorites/>}/><Route path="/panier" element={<Cart/>}/><Route path="/commande" element={<Checkout/>}/><Route path="/commande/confirmation" element={<Confirmation/>}/>
   <Route path="/connexion" element={<Auth mode="login"/>}/><Route path="/inscription" element={<Auth mode="register"/>}/><Route path="/mot-de-passe-oublie" element={<Auth mode="forgot"/>}/>
   <Route element={<AccountLayout/>}><Route path="/compte" element={<Dashboard/>}/><Route path="/commandes" element={<Orders/>}/><Route path="/commandes/:id" element={<OrderDetail/>}/><Route path="/adresses" element={<Addresses/>}/><Route path="/profil" element={<Profile/>}/><Route path="/assistance" element={<Support/>}/></Route>
-  <Route path="/livreur" element={<DriverApp/>}/><Route path="/aide" element={<Info slug="comment-ca-marche"/>}/><Route path="/contact" element={<Info slug="contact"/>}/><Route path="/:slug" element={<Info/>}/>
+  <Route path="/livreur" element={<DriverApp/>}/><Route path="/demande-livraison" element={<DeliveryRequest/>}/><Route path="/aide" element={<Info slug="comment-ca-marche"/>}/><Route path="/contact" element={<Info slug="contact"/>}/><Route path="/:slug" element={<Info/>}/>
   <Route path="/admin" element={<AdminLayout/>}><Route index element={<AdminHome/>}/><Route path="commandes" element={<AdminOrders/>}/><Route path="livreurs" element={<AdminDrivers/>}/><Route path="paiements" element={<AdminPayments/>}/><Route path="produits" element={<AdminProducts/>}/><Route path="clients" element={<AdminClients/>}/><Route path="temoignages" element={<AdminTestimonials/>}/><Route path="messages" element={<AdminMessages/>}/><Route path="annonces" element={<AdminAnnouncements/>}/></Route>
  </Routes></main>
  <footer className="footer"><div className="wrap"><div><Logo/><p>Marketplace de produits de Chine pour l’Afrique de l’Ouest. Lancement à Cotonou, Bénin.</p></div>
- <div><Link to="/comment-ca-marche">Comment ça marche</Link><Link to="/livraison">Livraison</Link><Link to="/retours">Retours</Link><Link to="/livreur">Espace livreur</Link></div>
+ <div><Link to="/comment-ca-marche">Comment ça marche</Link><Link to="/livraison">Livraison</Link><Link to="/retours">Retours</Link><Link to="/livreur">Espace livreur</Link><Link to="/demande-livraison">Demander un livreur</Link></div>
  <div><Link to="/faq">FAQ</Link><Link to="/contact">Contact</Link><a href={wa}>WhatsApp : +229 40 31 91 81</a></div>
  <div><Link to="/cgv">Conditions générales</Link><Link to="/confidentialite">Confidentialité</Link><Link to="/mentions-legales">Mentions légales</Link></div></div></footer>
  <a className={'wa'+(hide?' hide':'')} href={wa} target="_blank" rel="noopener" aria-label="Écrire à TAIPOC sur WhatsApp"><Ico n="chat" s={22}/></a>

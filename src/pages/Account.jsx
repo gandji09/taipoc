@@ -15,13 +15,14 @@ export function Auth({mode}){const {login}=useStore();const nav=useNavigate();co
  {mode==='register'&&<label>Nom complet<input value={f.name} onChange={on('name')}/>{e.name&&<span className="err" role="alert">{e.name}</span>}</label>}
  <label>E-mail<input type="email" value={f.email} onChange={on('email')}/>{e.email&&<span className="err" role="alert">{e.email}</span>}</label>
  {mode!=='forgot'&&<label>Mot de passe<input type="password" value={f.pw} onChange={on('pw')}/>{e.pw&&<span className="err" role="alert">{e.pw}</span>}</label>}
+ {mode==='register'&&<p className="note">En créant un compte, vous reconnaissez avoir pris connaissance de la <Link to="/confidentialite" className="lnk">politique de confidentialité</Link>.</p>}
  {sent&&<p className="okmsg" role="status">Si cette adresse existe, un lien de réinitialisation sera envoyé.</p>}
  <button className="btn btn-primary block" type="submit">{mode==='forgot'?'Envoyer le lien':T}</button>
  {mode==='login'&&<p><Link to="/mot-de-passe-oublie" className="lnk">Mot de passe oublié ?</Link> · <Link to="/inscription" state={loc.state} className="lnk">Créer un compte</Link></p>}
  {mode==='register'&&<p>Déjà inscrit ? <Link to="/connexion" state={loc.state} className="lnk">Se connecter</Link></p>}</form>}
 
 export function AccountLayout(){const {user,logout}=useStore();if(!user)return <Navigate to="/connexion"/>
- return <><h1 className="ptitle">Bonjour {user.name}</h1><nav className="tabs" aria-label="Espace client">{[['/compte','Accueil'],['/commandes','Commandes'],['/adresses','Adresses'],['/favoris','Favoris'],['/profil','Profil'],['/assistance','Assistance']].map(([t,n])=><NavLink key={t} to={t} end>{n}</NavLink>)}<button className="lnk" onClick={logout}>Déconnexion</button></nav><Outlet/></>}
+ return <><h1 className="ptitle">Bonjour {user.name}</h1><nav className="tabs" aria-label="Espace client">{[['/compte','Accueil'],['/commandes','Commandes'],['/demande-livraison','Livreur'],['/adresses','Adresses'],['/favoris','Favoris'],['/profil','Profil'],['/assistance','Assistance']].map(([t,n])=><NavLink key={t} to={t} end>{n}</NavLink>)}<button className="lnk" onClick={logout}>Déconnexion</button></nav><Outlet/></>}
 const Badge=({s})=><span className={'st st-'+s}>{STATUS[s]}</span>
 export function Dashboard(){return <><div className="note demo">Commandes d’exemple : l’historique réel viendra de Supabase.</div><h2>Commandes en cours</h2><OrderList/></>}
 export function OrderList(){return <ul className="list">{DEMO_ORDERS.map(o=><li key={o.id} className="line"><div style={{flex:1}}><Link to={'/commandes/'+o.id}><b>{o.id}</b></Link><div className="note">{o.items.join(', ')}</div></div><div style={{textAlign:'right'}}><b>{formatXOF(o.total)} FCFA</b><br/><Badge s={o.status}/></div></li>)}</ul>}

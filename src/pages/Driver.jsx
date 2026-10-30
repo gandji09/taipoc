@@ -8,8 +8,8 @@ export function DriverApp(){const {user}=useStore();const [d,setD]=useState(read
  const up=(id,patch)=>{const n=d.map(x=>x.id===id?{...x,...patch}:x);setD(n);writeDeliveries(n)}
  const confirm=x=>{if((code[x.id]||'').trim()!==x.code)return setMsg({...msg,[x.id]:'Code incorrect. Demandez le code de livraison au client.'});up(x.id,{status:'delivered'})}
  const mine=d.filter(x=>x.driver&&x.driver.toLowerCase()===user.email.toLowerCase());const todo=mine.filter(x=>x.status==='assigned'||x.status==='out');const done=mine.filter(x=>x.status==='delivered'||x.status==='failed')
- const Card=({x})=><li className="line" style={{display:'block'}}><div style={{display:'flex',justifyContent:'space-between',gap:8}}><b>{x.orderId}</b><span className={'st'+(x.status==='delivered'?' st-paid':'')}>{DSTATUS[x.status]}</span></div>
-  <p style={{margin:'6px 0'}}>{x.customer}</p><p className="note">{x.address}</p><p className="note">{x.items}</p>
+ const Card=({x})=><li className="line" style={{display:'block'}}><div style={{display:'flex',justifyContent:'space-between',gap:8}}><b>{x.kind==='service'?'Service '+x.id:x.orderId}</b><span className={'st'+(x.status==='delivered'?' st-paid':'')}>{DSTATUS[x.status]}</span></div>
+  <p style={{margin:'6px 0'}}>{x.customer}</p>{x.kind==='service'?<><p className="note">Ramassage : {x.pickup}</p><p className="note">Livraison : {x.address}</p></>:<p className="note">{x.address}</p>}<p className="note">{x.items}</p>
   <a className="btn btn-secondary" href={'tel:'+x.phone.replace(/\s/g,'')}>Appeler {x.phone}</a>
   {x.status==='assigned'&&<button className="btn btn-primary block" onClick={()=>up(x.id,{status:'out'})}>Je pars livrer</button>}
   {x.status==='out'&&<><label style={{marginTop:12}}>Code de livraison donné par le client<input inputMode="numeric" maxLength={4} value={code[x.id]||''} onChange={e=>setCode({...code,[x.id]:e.target.value})}/></label>{msg[x.id]&&<span className="err" role="alert">{msg[x.id]}</span>}
