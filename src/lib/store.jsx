@@ -16,7 +16,7 @@ export function Store({children}){
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_e,s)=>{setTimeout(()=>read(s),0)})
     const t=setInterval(()=>{supabase.auth.getSession().then(({data})=>{if(data.session&&!document.hidden)seen(data.session.user.id)})},120000)
     return()=>{subscription.unsubscribe();clearInterval(t)}},[read])
-  const add=(id,variant,qty=1)=>setCart(c=>{const l=c.find(x=>x.id===id&&x.variant===variant);return l?c.map(x=>x===l?{...x,qty:x.qty+qty}:x):[...c,{id,variant,qty}]})
+  const add=(id,variant,qty=1,size='')=>setCart(c=>{const l=c.find(x=>x.id===id&&x.variant===variant&&(x.size||'')===size);return l?c.map(x=>x===l?{...x,qty:x.qty+qty}:x):[...c,{id,variant,size,qty}]})
   const setQty=(i,q)=>setCart(c=>q<1?c.filter((_,k)=>k!==i):c.map((x,k)=>k===i?{...x,qty:Math.min(q,100)}:x))
   if(!ready)return null
   return <C.Provider value={{cart,add,setQty,clear:()=>setCart([]),count:cart.reduce((n,x)=>n+x.qty,0),user,logout:()=>supabase.auth.signOut(),refresh:()=>supabase.auth.getSession().then(({data})=>read(data.session)),

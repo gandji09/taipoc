@@ -44,15 +44,16 @@ function Gallery({p}){const src=p.images?.[0]||p.image_url
 export function Favorites(){const {fav}=useStore();const {items,state}=useProducts();const L=items.filter(p=>fav.includes(p.id))
  return <><h1 className="ptitle">Mes favoris</h1>{L.length?<Grid items={L} state={state}/>:<div className="empty"><p>Aucun favori pour l’instant. Touchez le cœur sur un produit pour le retrouver ici.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div>}</>}
 export function Product(){const {id}=useParams();const {items,state}=useProducts();const {add}=useStore();const nav=useNavigate()
- const p=items.find(x=>x.id===id);const [v,setV]=useState('');const [q,setQ]=useState(1);const [ok,setOk]=useState(false);const {fav,toggleFav,seen}=useStore();useEffect(()=>{if(p)seen(p.id)},[p?.id])
+ const p=items.find(x=>x.id===id);const [v,setV]=useState('');const [sz,setSz]=useState('');const [szErr,setSzErr]=useState(false);const [q,setQ]=useState(1);const [ok,setOk]=useState(false);const {fav,toggleFav,seen}=useStore();useEffect(()=>{if(p)seen(p.id)},[p?.id])
  if(state==='loading')return <div className="skeleton" style={{height:320}}/>
  if(!p)return <div className="empty"><p>Ce produit n’existe pas ou n’est plus disponible.</p><Link className="btn btn-primary" to="/catalogue">Retour au catalogue</Link></div>
- const isFav=fav.includes(p.id);const vs=p.variants||[];const variant=v||vs[0]||''
+ const isFav=fav.includes(p.id);const vs=p.variants||[];const ss=p.sizes||[];const variant=v||vs[0]||''
  return <div className="pdp"><Gallery p={p}/>
  <div><h1 style={{fontSize:22}}>{p.name}</h1><Price p={p}/><button className="fav" aria-pressed={isFav} onClick={()=>toggleFav(p.id)}>{isFav?'♥ Dans mes favoris':'♡ Ajouter aux favoris'}</button><div className="pricebox"><div><span>Produit × {q}</span><b>{formatXOF(p.price_xof*q)} FCFA</b></div><div><span>Expédition</span><span>À confirmer avant paiement</span></div><div><span>Délai estimé</span><span>{p.lead_time_days?p.lead_time_days+' jours (estimation)':'À confirmer'}</span></div></div>
- {vs.length>0&&<fieldset className="opts"><legend>Variante</legend>{vs.map(x=><button key={x} className={'chip'+(x===variant?' on':'')} aria-pressed={x===variant} onClick={()=>setV(x)}>{x}</button>)}</fieldset>}
+ {ss.length>0&&<fieldset className="opts"><legend>Taille</legend>{ss.map(x=><button key={x} type="button" className={'chip'+(x===sz?' on':'')} aria-pressed={x===sz} onClick={()=>{setSz(x);setSzErr(false)}}>{x}</button>)}{szErr&&<span className="err" role="alert">Choisissez une taille pour commander.</span>}</fieldset>}
+ {vs.length>0&&<fieldset className="opts"><legend>Couleur ou option</legend>{vs.map(x=><button key={x} className={'chip'+(x===variant?' on':'')} aria-pressed={x===variant} onClick={()=>setV(x)}>{x}</button>)}</fieldset>}
  <div className="qty"><button aria-label="Moins" onClick={()=>setQ(Math.max(1,q-1))}>−</button><span>{q}</span><button aria-label="Plus" onClick={()=>setQ(q+1)}>+</button></div>
- <button className="btn btn-primary block" disabled={p.stock_status==='Indisponible'} onClick={()=>{add(p.id,variant,q);setOk(true)}}>{p.stock_status==='Indisponible'?'Indisponible pour le moment':'Ajouter au panier'}</button>
+ <button className="btn btn-primary block" disabled={p.stock_status==='Indisponible'} onClick={()=>{if(ss.length&&!sz){setSzErr(true);return}add(p.id,variant,q,sz);setOk(true)}}>{p.stock_status==='Indisponible'?'Indisponible pour le moment':'Ajouter au panier'}</button>
  {ok&&<p role="status" className="okmsg">Ajouté au panier. <Link to="/panier">Voir le panier</Link></p>}
  <div className="deliv" style={{marginTop:16}}><b>Livraison</b><p>Délai estimé : à confirmer par TAIPOC. Livraison à domicile ou retrait à l’entreprise à Cotonou. <Link to="/livraison">Détails</Link></p></div>
  <h2 style={{margin:'20px 0 8px',fontSize:16}}>Description</h2><p>{p.description}</p>{(p.images||[]).slice(1,3).length>0&&<div className="details">{p.images.slice(1,3).map((s,i)=><img key={s} src={s} alt={p.name+', détail '+(i+1)} loading="lazy"/>)}</div>}{p.specs?.length>0&&<><h2 style={{margin:'20px 0 8px',fontSize:16}}>Caractéristiques</h2><table className="specs"><tbody>{p.specs.map(([k,val])=><tr key={k}><th>{k}</th><td>{val}</td></tr>)}</tbody></table></>}
@@ -64,7 +65,7 @@ export function lines(cart,items){return cart.map((l,i)=>({...l,i,p:items.find(x
 export function Cart(){const {cart,setQty,user}=useStore();const {items}=useProducts();const L=lines(cart,items);const sub=L.reduce((s,l)=>s+l.p.price_xof*l.qty,0)
  if(!L.length)return <div className="empty"><h1 className="ptitle">Panier</h1><p>Votre panier est vide.</p><Link className="btn btn-primary" to="/catalogue">Découvrir le catalogue</Link></div>
  return <><h1 className="ptitle">Panier</h1><ul className="list">{L.map(l=><li key={l.i} className="line"><div className="thumb">{l.p.image_url?<img src={l.p.image_url} alt=""/>:<Ph name={l.p.name}/>}</div>
- <div style={{flex:1}}><b>{l.p.name}</b><div className="note">{l.variant}</div><div>{formatXOF(l.p.price_xof)} FCFA</div>
+ <div style={{flex:1}}><b>{l.p.name}</b><div className="note">{[l.variant,l.size&&'Taille '+l.size].filter(Boolean).join(' · ')}</div><div>{formatXOF(l.p.price_xof)} FCFA</div>
  <div className="qty"><button aria-label="Moins" onClick={()=>setQty(l.i,l.qty-1)}>−</button><span>{l.qty}</span><button aria-label="Plus" onClick={()=>setQty(l.i,l.qty+1)}>+</button><button className="lnk" onClick={()=>setQty(l.i,0)}>Retirer</button></div></div>
  <b>{formatXOF(l.p.price_xof*l.qty)}</b></li>)}</ul>
  <div className="sum"><div><span>Sous-total</span><b>{formatXOF(sub)} FCFA</b></div><div><span>Frais d’expédition</span><span>À confirmer avant paiement</span></div>{user?<Link className="btn btn-primary block" to="/commande">Passer la commande</Link>:<><Link className="btn btn-primary block" to="/connexion" state={{from:'/commande'}}>Se connecter pour commander</Link><p className="note">Un compte est nécessaire pour commander et suivre vos colis.</p></>}</div></>}
@@ -74,7 +75,7 @@ export function Checkout(){const {cart,clear,user,addresses}=useStore();const {i
  const sub=L.reduce((s,l)=>s+l.p.price_xof*l.qty,0);const [f,setF]=useState({name:user?.name||'',phone:'',mode:'home',addr:'',pay:'mtn',cgv:false});const [e,setE]=useState({});const [busy,setBusy]=useState(false)
  const on=k=>ev=>setF({...f,[k]:ev.target.value})
  const go=async ev=>{ev.preventDefault();const x={};if(!f.name.trim())x.name='Entrez votre nom complet.';if(!/^\+?[0-9 ]{8,15}$/.test(f.phone.trim()))x.phone='Entrez un numéro valide, par exemple 01 23 45 67 89.';if(!f.cgv)x.cgv='Acceptez les conditions générales de vente pour commander.';if(f.mode==='home'&&!f.addr.trim())x.addr='Indiquez votre quartier et un repère pour la livraison.';setE(x);if(Object.keys(x).length)return
-  if(supabase){setBusy(true);const {data,error}=await supabase.rpc('create_order',{p_items:L.map(l=>({product_id:l.id,qty:l.qty})),p_mode:f.mode,p_address:f.mode==='home'?f.addr.trim():'Retrait à l’entreprise',p_phone:f.phone.trim()});setBusy(false)
+  if(supabase){setBusy(true);const {data,error}=await supabase.rpc('create_order',{p_items:L.map(l=>({product_id:l.id,qty:l.qty,variant:l.variant||null,size:l.size||null})),p_mode:f.mode,p_address:f.mode==='home'?f.addr.trim():'Retrait à l’entreprise',p_phone:f.phone.trim()});setBusy(false)
    if(error)return setE({form:'Commande impossible : '+error.message});clear();return nav('/commande/confirmation',{state:{total:sub,cgv:CGV_VERSION,orderId:data}})}
 }
  if(!L.length)return <div className="empty"><p>Votre panier est vide.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div>

@@ -36,10 +36,10 @@ export function AdminSecurity(){const [pw,setPw]=useState('');const [m,setM]=use
  <form className="form" onSubmit={chg}><label>Nouveau mot de passe (12 caractères minimum)<input type="password" autoComplete="new-password" value={pw} onChange={e=>setPw(e.target.value)}/></label><button className="btn btn-secondary">Changer le mot de passe</button>{m&&<p role="status" className={m.startsWith('Mot')?'okmsg':'err'}>{m}</p>}</form>
  <button className="btn btn-secondary" onClick={()=>supabase.auth.signOut({scope:'global'})}>Déconnecter tous mes appareils</button></div>}
 
-const EMPTY={name:'',cat:'',price:'',old:'',variants:'',desc:'',specs:'',images:['','',''],supUrl:'',supCost:'',weight:'',lead:'',stock:'Disponible',ship:'Hors frais d’expédition',active:true,isNew:false,qualified:false}
+const EMPTY={name:'',cat:'',price:'',old:'',variants:'',sizes:'',desc:'',specs:'',images:['','',''],supUrl:'',supCost:'',weight:'',lead:'',stock:'Disponible',ship:'Hors frais d’expédition',active:true,isNew:false,qualified:false}
 const IMG_OK=['image/jpeg','image/png','image/webp']
 const pad=a=>[a?.[0]||'',a?.[1]||'',a?.[2]||'']
-const toForm=(r,pv)=>({...EMPTY,id:r.id,name:r.name,cat:r.category_id||'',price:r.price_xof,old:r.old_price_xof||'',variants:(r.variants||[]).join(', '),desc:r.description||'',specs:(r.specs||[]).map(([k,v])=>k+': '+v).join('\n'),
+const toForm=(r,pv)=>({...EMPTY,id:r.id,name:r.name,cat:r.category_id||'',price:r.price_xof,old:r.old_price_xof||'',variants:(r.variants||[]).join(', '),sizes:(r.sizes||[]).join(', '),desc:r.description||'',specs:(r.specs||[]).map(([k,v])=>k+': '+v).join('\n'),
  images:pad(r.images?.length?r.images:(r.image_url?[r.image_url]:[])),supUrl:pv?.supplier_url||'',supCost:pv?.supplier_cost_xof||'',weight:r.weight_kg||'',lead:r.lead_time_days||'',stock:r.stock_status||'Disponible',ship:r.shipping_note||'',active:r.is_active,isNew:r.is_new,qualified:r.is_qualified})
 async function shrink(file,max=1200,q=.85){const b=await createImageBitmap(file);const r=Math.min(1,max/Math.max(b.width,b.height));const c=document.createElement('canvas');c.width=Math.round(b.width*r);c.height=Math.round(b.height*r);c.getContext('2d').drawImage(b,0,0,c.width,c.height);return new Promise(res=>c.toBlob(res,'image/webp',q))}
 async function uploadImage(file){if(!IMG_OK.includes(file.type))throw new Error('Format non accepté : utilisez JPG, PNG ou WebP.');if(file.size>15*1024*1024)throw new Error('Photo trop lourde (15 Mo maximum).')
@@ -57,7 +57,7 @@ export function AdminProducts(){
   setBusy(true);setMsg('')
   const specs=f.specs.split('\n').map(l=>l.split(':')).filter(a=>a[0].trim()&&a[1]).map(a=>[a[0].trim(),a.slice(1).join(':').trim()])
   const row={name:f.name.trim(),category_id:f.cat||null,description:f.desc||null,price_xof:+f.price,old_price_xof:f.old?+f.old:null,shipping_note:f.ship||null,image_url:f.images[0]||null,images:f.images.filter(Boolean),specs,
-   is_active:f.active,is_new:f.isNew,is_qualified:f.qualified,weight_kg:f.weight?+f.weight:null,lead_time_days:f.lead?+f.lead:null,variants:f.variants.split(',').map(v=>v.trim()).filter(Boolean),stock_status:f.stock}
+   is_active:f.active,is_new:f.isNew,is_qualified:f.qualified,weight_kg:f.weight?+f.weight:null,lead_time_days:f.lead?+f.lead:null,variants:f.variants.split(',').map(v=>v.trim()).filter(Boolean),sizes:f.sizes.split(',').map(v=>v.trim()).filter(Boolean),stock_status:f.stock}
   const r=f.id?await supabase.from('products').update(row).eq('id',f.id).select('id').single():await supabase.from('products').insert(row).select('id').single()
   if(r.error){setBusy(false);return setMsg('Erreur : enregistrement refusé : '+r.error.message)}
   const pv=await supabase.from('product_private').upsert({product_id:r.data.id,supplier_url:f.supUrl||null,supplier_cost_xof:f.supCost?+f.supCost:null});if(pv.error){setBusy(false);return setMsg('Erreur : infos internes refusées : '+pv.error.message)}
@@ -73,7 +73,7 @@ export function AdminProducts(){
  <p className="note">Les photos de détail s’affichent seulement sur la fiche du produit. Les photos sont réduites automatiquement pour charger vite sur mobile.</p><Er m={e.images}/></fieldset>
  {field('name','Nom du produit')}<label>Catégorie<select value={f.cat} onChange={on('cat')}><option value="">Choisir…</option>{cats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
  {field('price','Prix de vente (FCFA)',{inputMode:'numeric'})}{field('old','Ancien prix, si promotion réelle (FCFA)',{inputMode:'numeric'})}
- {field('variants','Variantes, séparées par des virgules (ex. Noir, Blanc)')}<label>Description<textarea rows="3" value={f.desc} onChange={on('desc')}/></label>
+ {field('variants','Couleurs ou options, séparées par des virgules (ex. Noir, Blanc)')}{field('sizes','Tailles disponibles, séparées par des virgules (ex. S, M, L, XL ou 38, 39, 40)')}<p className="note">Si vous remplissez les tailles, le client doit en choisir une pour commander, et la taille apparaît dans la commande. Laissez vide pour un produit sans taille.</p><label>Description<textarea rows="3" value={f.desc} onChange={on('desc')}/></label>
  <label>Caractéristiques, une par ligne (Clé: valeur)<textarea rows="3" value={f.specs} onChange={on('specs')}/></label>
  {field('weight','Poids (kg)',{inputMode:'decimal'})}{field('lead','Délai estimé de livraison (jours)',{inputMode:'numeric'})}
  <label>Disponibilité<select value={f.stock} onChange={on('stock')}><option>Disponible</option><option>Sur commande</option><option>Indisponible</option></select></label>{field('ship','Mention d’expédition affichée sous le prix')}

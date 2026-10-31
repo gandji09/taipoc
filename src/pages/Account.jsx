@@ -1,16 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../lib/store.jsx'
 import { supabase } from '../lib/supabase.js'
 const Er=({m})=>m?<span className="err" role="alert">{m}</span>:null
-export function Auth({mode}){const nav=useNavigate();const loc=useLocation();const [f,setF]=useState({name:'',email:'',pw:''});const [e,setE]=useState({});const [sent,setSent]=useState(false);const [notice,setNotice]=useState('');const [busy,setBusy]=useState(false)
+export function Auth({mode}){const {user}=useStore();const nav=useNavigate();const loc=useLocation();const [f,setF]=useState({name:'',email:'',pw:''});const [e,setE]=useState({});const [sent,setSent]=useState(false);const [notice,setNotice]=useState('');const [busy,setBusy]=useState(false)
+ useEffect(()=>{if(user)nav(loc.state?.from||'/compte',{replace:true})},[user])
  const on=k=>ev=>setF({...f,[k]:ev.target.value})
  const go=async ev=>{ev.preventDefault();const x={};if(mode==='register'&&!f.name.trim())x.name='Entrez votre nom complet.';if(!/^\S+@\S+\.\S+$/.test(f.email))x.email='Entrez une adresse e-mail valide.'
   if(mode!=='forgot'&&f.pw.length<(mode==='register'?10:8))x.pw='Le mot de passe doit contenir au moins '+(mode==='register'?10:8)+' caractères.';setE(x);if(Object.keys(x).length)return
   setBusy(true);try{
    if(mode==='forgot'){await supabase.auth.resetPasswordForEmail(f.email.trim(),{redirectTo:location.origin+'/connexion'});return setSent(true)}
-   if(mode==='register'){const {data,error}=await supabase.auth.signUp({email:f.email.trim(),password:f.pw,options:{data:{full_name:f.name.trim()}}});if(error)return setE({email:/registered|already/i.test(error.message)?'Cette adresse a déjà un compte.':'Inscription impossible : '+error.message});if(!data.session)return setNotice('Compte créé. Vérifiez votre boîte e-mail pour confirmer votre adresse, puis connectez-vous.');return nav(loc.state?.from||'/compte')}
-   const {error}=await supabase.auth.signInWithPassword({email:f.email.trim(),password:f.pw});if(error)return setE({pw:'E-mail ou mot de passe incorrect.'});nav(loc.state?.from||'/compte')}finally{setBusy(false)}}
+   if(mode==='register'){const {data,error}=await supabase.auth.signUp({email:f.email.trim(),password:f.pw,options:{data:{full_name:f.name.trim()}}});if(error)return setE({email:/registered|already/i.test(error.message)?'Cette adresse a déjà un compte.':'Inscription impossible : '+error.message});if(!data.session)return setNotice('Compte créé. Vérifiez votre boîte e-mail pour confirmer votre adresse, puis connectez-vous.');return}
+   const {error}=await supabase.auth.signInWithPassword({email:f.email.trim(),password:f.pw});if(error)return setE({pw:'E-mail ou mot de passe incorrect.'})}finally{setBusy(false)}}
  const T={login:'Connexion',register:'Créer un compte',forgot:'Mot de passe oublié'}[mode]
  return <form onSubmit={go} noValidate className="form narrow"><h1 className="ptitle">{T}</h1>{loc.state?.from&&<p className="okmsg" role="status">Connectez-vous ou créez un compte pour continuer.</p>}
  {mode==='register'&&<label>Nom complet<input value={f.name} onChange={on('name')} autoComplete="name"/><Er m={e.name}/></label>}

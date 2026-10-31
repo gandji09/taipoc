@@ -11,27 +11,28 @@ export function useQuery(fn){const [s,set]=useState({data:null,error:null,loadin
 const fmt=d=>d?new Date(d).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''
 const Load=({q,children})=>q.loading?<div className="skeleton" style={{height:90}}/>:q.error?<p className="err" role="alert">Chargement impossible : {q.error.message}</p>:children
 const Badge=({s})=><span className={'st'+(s==='paid'||s==='delivered'?' st-paid':'')}>{STATUS[s]||s}</span>
+const lbl=i=>(i.products?.name||'Produit')+(i.size?' · taille '+i.size:'')+(i.variant?' · '+i.variant:'')+' × '+i.quantity
 const short=id=>String(id).slice(0,8).toUpperCase()
 const wa=t=>'https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(t)
 const byId=a=>Object.fromEntries((a||[]).map(x=>[x.id,x]))
 
 /* ===== Client ===== */
 export function LiveOrderList({limit}){const {user}=useStore()
- const q=useQuery(()=>supabase.from('orders').select('id,status,total_xof,created_at,order_items(quantity,products(name))').eq('user_id',user.id).order('created_at',{ascending:false}).limit(limit||100))
+ const q=useQuery(()=>supabase.from('orders').select('id,status,total_xof,created_at,order_items(quantity,variant,size,products(name))').eq('user_id',user.id).order('created_at',{ascending:false}).limit(limit||100))
  return <Load q={q}>{q.data&&(q.data.length===0?<div className="empty"><p>Aucune commande pour l’instant.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div>:
- <ul className="list">{q.data.map(o=><li key={o.id} className="line"><div style={{flex:1}}><Link to={'/commandes/'+o.id}><b>N° {short(o.id)}</b></Link><div className="note">{o.order_items.map(i=>(i.products?.name||'Produit')+' × '+i.quantity).join(', ')}</div><div className="note">{fmt(o.created_at)}</div></div>
+ <ul className="list">{q.data.map(o=><li key={o.id} className="line"><div style={{flex:1}}><Link to={'/commandes/'+o.id}><b>N° {short(o.id)}</b></Link><div className="note">{o.order_items.map(i=>lbl(i)).join(', ')}</div><div className="note">{fmt(o.created_at)}</div></div>
  <div style={{textAlign:'right'}}><b>{formatXOF(o.total_xof)} FCFA</b><br/><Badge s={o.status}/></div></li>)}</ul>)}</Load>}
 export function LiveDashboard(){const {user}=useStore();const q=useQuery(()=>supabase.from('payment_notes').select('level,note').eq('user_id',user.id).maybeSingle())
  return <>{q.data&&<div className="sum"><div><span>Niveau de paiement</span><b>{q.data.level}</b></div>{q.data.note&&<p className="note">{q.data.note}</p>}</div>}<h2 style={{marginTop:16}}>Mes commandes</h2><LiveOrderList limit={5}/><p><Link className="lnk" to="/commandes">Toutes mes commandes</Link></p></>}
 export const LiveOrders=()=><><h2>Historique des commandes</h2><LiveOrderList/></>
 export function LiveOrderDetail(){const {id}=useParams()
- const q=useQuery(async()=>{const {data:o,error}=await supabase.from('orders').select('*, order_items(quantity,unit_price_xof,products(name)), order_events(status,note,created_at)').eq('id',id).maybeSingle();if(error||!o)return {data:null,error}
+ const q=useQuery(async()=>{const {data:o,error}=await supabase.from('orders').select('*, order_items(quantity,variant,size,unit_price_xof,products(name)), order_events(status,note,created_at)').eq('id',id).maybeSingle();if(error||!o)return {data:null,error}
   const {data:d}=await supabase.from('deliveries').select('id,status').eq('order_id',id).maybeSingle();let code=null;if(d){const r=await supabase.from('delivery_codes').select('code').eq('delivery_id',d.id).maybeSingle();code=r.data?.code}
   return {data:{o,d,code},error:null}})
  return <Load q={q}>{!q.data?<div className="empty">Commande introuvable.</div>:(()=>{const {o,d,code}=q.data;const ev=Object.fromEntries(o.order_events.map(e=>[e.status,e]))
  return <><h2>Commande {short(o.id)}</h2><Badge s={o.status}/>
  <ol className="timeline">{STEPS.map(s=><li key={s} className={ev[s]?'done':''}><b>{STATUS[s]}</b><span className="note">{ev[s]?'Confirmé le '+fmt(ev[s].created_at):'À venir'}</span></li>)}</ol>
- <div className="sum">{o.order_items.map((i,k)=><div key={k}><span>{i.products?.name||'Produit'} × {i.quantity}</span><span>{formatXOF(i.unit_price_xof*i.quantity)} FCFA</span></div>)}
+ <div className="sum">{o.order_items.map((i,k)=><div key={k}><span>{lbl(i)}</span><span>{formatXOF(i.unit_price_xof*i.quantity)} FCFA</span></div>)}
  <div><span>Total produits</span><b>{formatXOF(o.total_xof)} FCFA</b></div><div><span>Frais d’expédition</span><span>{o.shipping_xof!=null?formatXOF(o.shipping_xof)+' FCFA':'confirmés par TAIPOC'}</span></div><div><span>Livraison</span><span>{o.delivery_mode==='home'?'À domicile':'Retrait à l’entreprise'}</span></div>
  {code&&d&&(d.status==='assigned'||d.status==='out')&&<><div><span>Code de livraison</span><b>{code}</b></div><p className="note">Donnez ce code au livreur uniquement à la remise du colis.</p></>}
  <a className="btn btn-secondary block" href={wa('Bonjour, question sur la commande '+short(o.id))}>Contacter l’assistance</a></div></>})()}</Load>}
@@ -71,12 +72,12 @@ export function ProductReviews({productId}){const {user}=useStore();const q=useQ
 /* ===== Livreur ===== */
 export function DriverLive(){const {user}=useStore();const [code,setCode]=useState({});const [msg,setMsg]=useState({})
  const q=useQuery(async()=>{const {data:d,error}=await supabase.from('deliveries').select('*').eq('driver_id',user?.id||'00000000-0000-0000-0000-000000000000').order('updated_at',{ascending:false});if(error)return {data:null,error}
-  const ids=d.filter(x=>x.order_id).map(x=>x.order_id);let o=[];if(ids.length){o=(await supabase.from('orders').select('id,delivery_address,delivery_phone,order_items(quantity,products(name))').in('id',ids)).data||[]}
+  const ids=d.filter(x=>x.order_id).map(x=>x.order_id);let o=[];if(ids.length){o=(await supabase.from('orders').select('id,delivery_address,delivery_phone,order_items(quantity,variant,size,products(name))').in('id',ids)).data||[]}
   return {data:d.map(x=>({...x,order:o.find(y=>y.id===x.order_id)})),error:null}})
  if(!user)return <Navigate to="/connexion" state={{from:'/livreur'}}/>
  if(!user.driver)return <div className="empty"><h1 className="ptitle">Espace livreur</h1><p>Cet espace est réservé aux livreurs enregistrés par TAIPOC.</p></div>
  const run=async(id,p)=>{const {error}=await p;setMsg({...msg,[id]:error?(error.message.includes('code')?'Code incorrect. Demandez le code de livraison au client.':'Action refusée : '+error.message):''});q.reload()}
- const Card=({x})=>{const addr=x.order?x.order.delivery_address:x.dropoff_address;const phone=x.order?x.order.delivery_phone:x.contact_phone;const what=x.order?x.order.order_items.map(i=>(i.products?.name||'Produit')+' × '+i.quantity).join(', '):x.description
+ const Card=({x})=>{const addr=x.order?x.order.delivery_address:x.dropoff_address;const phone=x.order?x.order.delivery_phone:x.contact_phone;const what=x.order?x.order.order_items.map(i=>lbl(i)).join(', '):x.description
   return <li className="line" style={{display:'block'}}><div style={{display:'flex',justifyContent:'space-between',gap:8}}><b>{x.order_id?short(x.order_id):'LIV-'+short(x.id)}</b><span className={'st'+(x.status==='delivered'?' st-paid':'')}>{DSTATUS[x.status]}</span></div>
   {x.pickup_address&&<p className="note">Ramassage : {x.pickup_address}</p>}<p className="note">{x.pickup_address?'Livraison : ':''}{addr}</p><p className="note">{what}</p>{phone&&<a className="btn btn-secondary" href={'tel:'+String(phone).replace(/\s/g,'')}>Appeler {phone}</a>}
   {x.status==='assigned'&&<button className="btn btn-primary block" onClick={()=>run(x.id,supabase.rpc('driver_start',{p_delivery:x.id}))}>Je pars livrer</button>}
@@ -93,10 +94,10 @@ export function AdminHomeLive(){const q=useQuery(async()=>{const c=(t,f)=>{const
  const L=['Commandes à traiter','Paiements en attente','Messages non lus','Témoignages à valider','Livraisons à assigner','Comptes inscrits','Produits']
  return <Load q={q}>{q.data&&<div className="kpis">{L.map((n,i)=><div key={n} className="kpi"><b>{q.data[i]}</b><span>{n}</span></div>)}</div>}</Load>}
 export function AdminOrdersLive(){const [msg,setMsg]=useState('')
- const q=useQuery(async()=>{const [o,p]=await Promise.all([supabase.from('orders').select('*, order_items(quantity,products(name))').order('created_at',{ascending:false}),supabase.from('profiles').select('id,full_name,phone,email')]);return {data:{o:o.data||[],p:byId(p.data)},error:o.error||p.error}})
+ const q=useQuery(async()=>{const [o,p]=await Promise.all([supabase.from('orders').select('*, order_items(quantity,variant,size,products(name))').order('created_at',{ascending:false}),supabase.from('profiles').select('id,full_name,phone,email')]);return {data:{o:o.data||[],p:byId(p.data)},error:o.error||p.error}})
  const rpc=async(fn,args)=>{const {error}=await supabase.rpc(fn,args);setMsg(error?'Action refusée : '+error.message:'');q.reload()}
  return <Load q={q}>{q.data&&<><Msg m={msg}/>{q.data.o.length===0?<div className="empty"><p>Aucune commande pour l’instant.</p></div>:<div className="tw"><table><thead><tr><th>N°</th><th>Client</th><th>Articles</th><th>Total</th><th>Livraison</th><th>Statut</th></tr></thead><tbody>{q.data.o.map(o=>{const c=q.data.p[o.user_id]||{}
- return <tr key={o.id}><td>{short(o.id)}<br/><span className="note">{fmt(o.created_at)}</span></td><td>{c.full_name||c.email||'—'}<br/>{o.delivery_phone||c.phone}</td><td>{o.order_items.map(i=>(i.products?.name||'Produit')+' × '+i.quantity).join(', ')}</td><td>{formatXOF(o.total_xof)}</td><td>{o.delivery_mode==='home'?o.delivery_address:'Retrait'}</td>
+ return <tr key={o.id}><td>{short(o.id)}<br/><span className="note">{fmt(o.created_at)}</span></td><td>{c.full_name||c.email||'—'}<br/>{o.delivery_phone||c.phone}</td><td>{o.order_items.map(i=>lbl(i)).join(', ')}</td><td>{formatXOF(o.total_xof)}</td><td>{o.delivery_mode==='home'?o.delivery_address:'Retrait'}</td>
  <td>{o.status==='pending_payment'?<button className="btn btn-secondary" onClick={()=>rpc('admin_confirm_payment',{p_order:o.id,p_note:'Paiement Mobile Money vérifié par l’équipe'})}>Confirmer le paiement</button>:<select aria-label={'Statut '+short(o.id)} value={o.status} onChange={e=>rpc('admin_set_status',{p_order:o.id,p_status:e.target.value})}>{Object.entries(STATUS).filter(([k])=>!['pending_payment','paid'].includes(k)||k===o.status).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>}</td></tr>})}</tbody></table></div>}
  <p className="note">« Confirmer le paiement » sert tant que FedaPay n’est pas branché : vérifiez d’abord la réception de l’argent.</p></>}</Load>}
 export function AdminPaymentsLive(){const q=useQuery(async()=>{const [o,p]=await Promise.all([supabase.from('orders').select('id,user_id,status,total_xof,created_at,fedapay_transaction_id').order('created_at',{ascending:false}),supabase.from('profiles').select('id,full_name,email')]);return {data:{o:o.data||[],p:byId(p.data)},error:o.error||p.error}});const [f,setF]=useState('')
