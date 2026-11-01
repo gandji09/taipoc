@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
 import { WHATSAPP, supabase } from './lib/supabase.js'
-import { LiveDashboard, LiveOrders, LiveOrderDetail, LiveSupport, DeliveryRequest, DriverLive, AdminHomeLive, AdminOrdersLive, AdminPaymentsLive, AdminClientsLive, AdminTestimonialsLive, AdminMessagesLive, AdminAnnouncementsLive, AdminDeliveriesLive } from './pages/Live.jsx'
+import { LiveDashboard, LiveOrders, LiveOrderDetail, LiveSupport, DeliveryRequest, DriverLive, AdminHomeLive, AdminOrdersLive, AdminPaymentsLive, AdminClientsLive, AdminTestimonialsLive, AdminMessagesLive, AdminAnnouncementsLive, AdminDeliveriesLive, AdminZonesLive } from './pages/Live.jsx'
 import { useStore, useProducts } from './lib/store.jsx'
 import { Ico, Parcel } from './lib/icons.jsx'
 import { Home, Catalogue, Product, Cart, Checkout, Confirmation, Favorites } from './pages/Shop.jsx'
@@ -30,7 +30,7 @@ export default function App(){const {count,user}=useStore();const {items}=usePro
   <Route path="/connexion" element={<Auth mode="login"/>}/><Route path="/inscription" element={<Auth mode="register"/>}/><Route path="/mot-de-passe-oublie" element={<Auth mode="forgot"/>}/>
   <Route element={<AccountLayout/>}><Route path="/compte" element={<LiveDashboard/>}/><Route path="/commandes" element={<LiveOrders/>}/><Route path="/commandes/:id" element={<LiveOrderDetail/>}/><Route path="/adresses" element={<Addresses/>}/><Route path="/profil" element={<Profile/>}/><Route path="/assistance" element={<LiveSupport/>}/></Route>
   <Route path="/diagnostic" element={<Diag/>}/><Route path="/livreur" element={<DriverLive/>}/><Route path="/demande-livraison" element={<DeliveryRequest/>}/><Route path="/aide" element={<Info slug="comment-ca-marche"/>}/><Route path="/contact" element={<Info slug="contact"/>}/><Route path="/:slug" element={<Info/>}/>
-  <Route path="/admin" element={<AdminLayout/>}><Route index element={<AdminHomeLive/>}/><Route path="commandes" element={<AdminOrdersLive/>}/><Route path="paiements" element={<AdminPaymentsLive/>}/><Route path="produits" element={<AdminProducts/>}/><Route path="clients" element={<AdminClientsLive/>}/><Route path="livreurs" element={<AdminDeliveriesLive/>}/><Route path="messages" element={<AdminMessagesLive/>}/><Route path="temoignages" element={<AdminTestimonialsLive/>}/><Route path="annonces" element={<AdminAnnouncementsLive/>}/><Route path="securite" element={<AdminSecurity/>}/></Route>
+  <Route path="/admin" element={<AdminLayout/>}><Route index element={<AdminHomeLive/>}/><Route path="commandes" element={<AdminOrdersLive/>}/><Route path="paiements" element={<AdminPaymentsLive/>}/><Route path="produits" element={<AdminProducts/>}/><Route path="clients" element={<AdminClientsLive/>}/><Route path="livreurs" element={<AdminDeliveriesLive/>}/><Route path="zones" element={<AdminZonesLive/>}/><Route path="messages" element={<AdminMessagesLive/>}/><Route path="temoignages" element={<AdminTestimonialsLive/>}/><Route path="annonces" element={<AdminAnnouncementsLive/>}/><Route path="securite" element={<AdminSecurity/>}/></Route>
  </Routes></main>
  <footer className="footer"><div className="wrap"><div><Logo/><p>Marketplace de produits de Chine pour l’Afrique de l’Ouest. Lancement à Cotonou, Bénin.</p></div>
  <div><Link to="/comment-ca-marche">Comment ça marche</Link><Link to="/livraison">Livraison</Link><Link to="/retours">Retours</Link><Link to="/livreur">Espace livreur</Link><Link to="/demande-livraison">Demander un livreur</Link></div>

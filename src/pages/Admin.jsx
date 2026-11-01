@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { formatXOF, supabase } from '../lib/supabase.js'
-const TABS=[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/paiements','Paiements'],['/admin/produits','Produits'],['/admin/clients','Clients'],['/admin/livreurs','Livraisons'],['/admin/messages','Messages'],['/admin/temoignages','Témoignages'],['/admin/annonces','Annonces'],['/admin/securite','Sécurité']]
+const TABS=[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/paiements','Paiements'],['/admin/produits','Produits'],['/admin/clients','Clients'],['/admin/livreurs','Livraisons'],['/admin/zones','Zones et tarifs'],['/admin/messages','Messages'],['/admin/temoignages','Témoignages'],['/admin/annonces','Annonces'],['/admin/securite','Sécurité']]
 const Er=({m})=>m?<span className="err" role="alert">{m}</span>:null
 function AdminLogin(){const [f,setF]=useState({email:'',pw:''});const [err,setErr]=useState('');const [busy,setBusy]=useState(false)
  const go=async ev=>{ev.preventDefault();setBusy(true);setErr('');const {error}=await supabase.auth.signInWithPassword({email:f.email.trim(),password:f.pw});setBusy(false);if(error)setErr('E-mail ou mot de passe incorrect.')}
@@ -42,7 +42,7 @@ const pad=a=>[a?.[0]||'',a?.[1]||'',a?.[2]||'']
 const toForm=(r,pv)=>({...EMPTY,id:r.id,name:r.name,cat:r.category_id||'',price:r.price_xof,old:r.old_price_xof||'',variants:(r.variants||[]).join(', '),sizes:(r.sizes||[]).join(', '),desc:r.description||'',specs:(r.specs||[]).map(([k,v])=>k+': '+v).join('\n'),
  images:pad(r.images?.length?r.images:(r.image_url?[r.image_url]:[])),supUrl:pv?.supplier_url||'',supCost:pv?.supplier_cost_xof||'',weight:r.weight_kg||'',lead:r.lead_time_days||'',stock:r.stock_status||'Disponible',ship:r.shipping_note||'',active:r.is_active,isNew:r.is_new,qualified:r.is_qualified})
 async function shrink(file,max=1200,q=.85){const b=await createImageBitmap(file);const r=Math.min(1,max/Math.max(b.width,b.height));const c=document.createElement('canvas');c.width=Math.round(b.width*r);c.height=Math.round(b.height*r);c.getContext('2d').drawImage(b,0,0,c.width,c.height);return new Promise(res=>c.toBlob(res,'image/webp',q))}
-async function uploadImage(file){if(!IMG_OK.includes(file.type))throw new Error('Format non accepté : utilisez JPG, PNG ou WebP.');if(file.size>15*1024*1024)throw new Error('Photo trop lourde (15 Mo maximum).')
+export async function uploadImage(file){if(!IMG_OK.includes(file.type))throw new Error('Format non accepté : utilisez JPG, PNG ou WebP.');if(file.size>15*1024*1024)throw new Error('Photo trop lourde (15 Mo maximum).')
  const blob=await shrink(file);const path=crypto.randomUUID()+'.webp';const {error}=await supabase.storage.from('product-images').upload(path,blob,{contentType:'image/webp',cacheControl:'31536000'});if(error)throw error
  return supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl}
 export function AdminProducts(){
