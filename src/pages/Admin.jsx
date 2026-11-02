@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { formatXOF, supabase } from '../lib/supabase.js'
-const TABS=[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/paiements','Paiements'],['/admin/produits','Produits'],['/admin/clients','Clients'],['/admin/livreurs','Livraisons'],['/admin/zones','Zones et tarifs'],['/admin/messages','Messages'],['/admin/temoignages','Témoignages'],['/admin/annonces','Annonces'],['/admin/securite','Sécurité']]
+const TABS=[['/admin','Tableau de bord'],['/admin/commandes','Commandes'],['/admin/devis','Devis'],['/admin/paiements','Paiements'],['/admin/produits','Produits'],['/admin/clients','Clients'],['/admin/livreurs','Livraisons'],['/admin/zones','Zones et tarifs'],['/admin/messages','Messages'],['/admin/temoignages','Témoignages'],['/admin/annonces','Annonces'],['/admin/securite','Sécurité']]
 const Er=({m})=>m?<span className="err" role="alert">{m}</span>:null
 function AdminLogin(){const [f,setF]=useState({email:'',pw:''});const [err,setErr]=useState('');const [busy,setBusy]=useState(false)
  const go=async ev=>{ev.preventDefault();setBusy(true);setErr('');const {error}=await supabase.auth.signInWithPassword({email:f.email.trim(),password:f.pw});setBusy(false);if(error)setErr('E-mail ou mot de passe incorrect.')}

@@ -37,7 +37,7 @@ export function Catalogue(){const {items,state}=useProducts();const [sp,setSp]=u
  return <><h1 className="ptitle">Catalogue</h1>
  <div className="filters"><label>Catégorie<select value={cat} onChange={e=>set('cat',e.target.value)}><option value="">Toutes</option>{catNames(items).map(c=><option key={c}>{c}</option>)}</select></label>
  <label>Trier par<select value={sort} onChange={e=>set('sort',e.target.value)}><option value="">Pertinence</option><option value="asc">Prix croissant</option><option value="desc">Prix décroissant</option><option value="new">Nouveautés</option></select></label></div>
- <p className="note">{state==='ready'?list.length+' produit(s)'+(q?' pour « '+q+' »':''):''}</p><Grid items={list} state={state}/></>}
+ <p className="note">{state==='ready'?list.length+' produit(s)'+(q?' pour « '+q+' »':''):''}</p><Grid items={list} state={state}/><p className="note" style={{marginTop:16}}>Vous ne trouvez pas ce que vous cherchez ? <Link className="lnk" to="/devis">Demandez un devis</Link> avec le lien du produit.</p></>}
 
 function Gallery({p}){const src=p.images?.[0]||p.image_url
  return <div>{src?<img className="pimg" src={src} alt={p.name}/>:<Ph name={p.name}/>}</div>}

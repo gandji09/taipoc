@@ -1,6 +1,6 @@
 // Pages branchées sur Supabase : données réelles, rafraîchies toutes les 15 secondes.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { supabase, formatXOF, WHATSAPP } from '../lib/supabase.js'
 import { useStore } from '../lib/store.jsx'
 import { STATUS, STEPS } from '../data/labels.js'
@@ -12,14 +12,14 @@ export function useQuery(fn){const [s,set]=useState({data:null,error:null,loadin
 const fmt=d=>d?new Date(d).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''
 const Load=({q,children})=>q.loading?<div className="skeleton" style={{height:90}}/>:q.error?<p className="err" role="alert">Chargement impossible : {q.error.message}</p>:children
 const Badge=({s})=><span className={'st'+(s==='paid'||s==='delivered'?' st-paid':'')}>{STATUS[s]||s}</span>
-const lbl=i=>(i.products?.name||'Produit')+(i.size?' · taille '+i.size:'')+(i.variant?' · '+i.variant:'')+' × '+i.quantity
+const lbl=i=>(i.products?.name||i.item_name||'Produit')+(i.size?' · taille '+i.size:'')+(i.variant?' · '+i.variant:'')+' × '+i.quantity
 const short=id=>String(id).slice(0,8).toUpperCase()
 const wa=t=>'https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(t)
 const byId=a=>Object.fromEntries((a||[]).map(x=>[x.id,x]))
 
 /* ===== Client ===== */
 export function LiveOrderList({limit}){const {user}=useStore()
- const q=useQuery(()=>supabase.from('orders').select('id,status,total_xof,created_at,order_items(quantity,variant,size,products(name))').eq('user_id',user.id).order('created_at',{ascending:false}).limit(limit||100))
+ const q=useQuery(()=>supabase.from('orders').select('id,status,total_xof,created_at,order_items(quantity,variant,size,item_name,products(name))').eq('user_id',user.id).order('created_at',{ascending:false}).limit(limit||100))
  return <Load q={q}>{q.data&&(q.data.length===0?<div className="empty"><p>Aucune commande pour l’instant.</p><Link className="btn btn-primary" to="/catalogue">Voir le catalogue</Link></div>:
  <ul className="list">{q.data.map(o=><li key={o.id} className="line"><div style={{flex:1}}><Link to={'/commandes/'+o.id}><b>N° {short(o.id)}</b></Link><div className="note">{o.order_items.map(i=>lbl(i)).join(', ')}</div><div className="note">{fmt(o.created_at)}</div></div>
  <div style={{textAlign:'right'}}><b>{formatXOF(o.total_xof)} FCFA</b><br/><Badge s={o.status}/></div></li>)}</ul>)}</Load>}
@@ -27,7 +27,7 @@ export function LiveDashboard(){const {user}=useStore();const q=useQuery(()=>sup
  return <>{q.data&&<div className="sum"><div><span>Niveau de paiement</span><b>{q.data.level}</b></div>{q.data.note&&<p className="note">{q.data.note}</p>}</div>}<h2 style={{marginTop:16}}>Mes commandes</h2><LiveOrderList limit={5}/><p><Link className="lnk" to="/commandes">Toutes mes commandes</Link></p></>}
 export const LiveOrders=()=><><h2>Historique des commandes</h2><LiveOrderList/></>
 export function LiveOrderDetail(){const {id}=useParams()
- const q=useQuery(async()=>{const {data:o,error}=await supabase.from('orders').select('*, order_items(quantity,variant,size,unit_price_xof,products(name)), order_events(status,note,created_at)').eq('id',id).maybeSingle();if(error||!o)return {data:null,error}
+ const q=useQuery(async()=>{const {data:o,error}=await supabase.from('orders').select('*, order_items(quantity,variant,size,item_name,unit_price_xof,products(name)), order_events(status,note,created_at)').eq('id',id).maybeSingle();if(error||!o)return {data:null,error}
   const {data:d}=await supabase.from('deliveries').select('id,status,driver_id').eq('order_id',id).maybeSingle();let code=null;if(d){const r=await supabase.from('delivery_codes').select('code').eq('delivery_id',d.id).maybeSingle();code=r.data?.code}
   return {data:{o,d,code},error:null}})
  return <Load q={q}>{!q.data?<div className="empty">Commande introuvable.</div>:(()=>{const {o,d,code}=q.data;const ev=Object.fromEntries(o.order_events.map(e=>[e.status,e]))
@@ -83,7 +83,7 @@ function DriverCard({id}){const q=useQuery(async()=>{const [i,r]=await Promise.a
 /* ===== Livreur ===== */
 export function DriverLive(){const {user}=useStore();const [code,setCode]=useState({});const [msg,setMsg]=useState({})
  const q=useQuery(async()=>{const {data:d,error}=await supabase.from('deliveries').select('*').eq('driver_id',user?.id||'00000000-0000-0000-0000-000000000000').order('updated_at',{ascending:false});if(error)return {data:null,error}
-  const ids=d.filter(x=>x.order_id).map(x=>x.order_id);let o=[];if(ids.length){o=(await supabase.from('orders').select('id,delivery_address,delivery_phone,order_items(quantity,variant,size,products(name))').in('id',ids)).data||[]}
+  const ids=d.filter(x=>x.order_id).map(x=>x.order_id);let o=[];if(ids.length){o=(await supabase.from('orders').select('id,delivery_address,delivery_phone,order_items(quantity,variant,size,item_name,products(name))').in('id',ids)).data||[]}
   return {data:d.map(x=>({...x,order:o.find(y=>y.id===x.order_id)})),error:null}})
  const NIL='00000000-0000-0000-0000-000000000000';const av=useQuery(()=>supabase.from('driver_accounts').select('available').eq('driver_id',user?.id||NIL).maybeSingle());const op=useQuery(()=>supabase.rpc('open_deliveries'))
  const nOpen=av.data?.available?(op.data?.length||0):0;const prev=useRef(0);const TITLE='TAIPOC – Achetez en Chine, payez en FCFA'
@@ -109,12 +109,12 @@ export function DriverLive(){const {user}=useStore();const [code,setCode]=useSta
 /* ===== Administration ===== */
 const Msg=({m})=>m?<p className="err" role="alert">{m}</p>:null
 export function AdminHomeLive(){const q=useQuery(async()=>{const c=(t,f)=>{const x=supabase.from(t).select('*',{count:'exact',head:true});return f?f(x):x}
- const r=await Promise.all([c('orders',x=>x.not('status','in','(delivered,cancelled)')),c('orders',x=>x.eq('status','pending_payment')),c('support_messages',x=>x.eq('status','Nouveau')),c('testimonials',x=>x.eq('status','pending')),c('deliveries',x=>x.eq('status','to_assign')),c('profiles'),c('products')])
+ const r=await Promise.all([c('orders',x=>x.not('status','in','(delivered,cancelled)')),c('orders',x=>x.eq('status','pending_payment')),c('support_messages',x=>x.eq('status','Nouveau')),c('testimonials',x=>x.eq('status','pending')),c('deliveries',x=>x.eq('status','to_assign')),c('profiles'),c('products'),c('quote_requests',x=>x.eq('status','new'))])
  return {data:r.map(x=>x.count??0),error:r.find(x=>x.error)?.error||null}})
- const L=['Commandes à traiter','Paiements en attente','Messages non lus','Témoignages à valider','Livraisons à assigner','Comptes inscrits','Produits']
+ const L=['Commandes à traiter','Paiements en attente','Messages non lus','Témoignages à valider','Livraisons à assigner','Comptes inscrits','Produits','Devis à traiter']
  return <Load q={q}>{q.data&&<div className="kpis">{L.map((n,i)=><div key={n} className="kpi"><b>{q.data[i]}</b><span>{n}</span></div>)}</div>}</Load>}
 export function AdminOrdersLive(){const [msg,setMsg]=useState('')
- const q=useQuery(async()=>{const [o,p]=await Promise.all([supabase.from('orders').select('*, order_items(quantity,variant,size,products(name))').order('created_at',{ascending:false}),supabase.from('profiles').select('id,full_name,phone,email')]);return {data:{o:o.data||[],p:byId(p.data)},error:o.error||p.error}})
+ const q=useQuery(async()=>{const [o,p]=await Promise.all([supabase.from('orders').select('*, order_items(quantity,variant,size,item_name,products(name))').order('created_at',{ascending:false}),supabase.from('profiles').select('id,full_name,phone,email')]);return {data:{o:o.data||[],p:byId(p.data)},error:o.error||p.error}})
  const rpc=async(fn,args)=>{const {error}=await supabase.rpc(fn,args);setMsg(error?'Action refusée : '+error.message:'');q.reload()}
  return <Load q={q}>{q.data&&<><Msg m={msg}/>{q.data.o.length===0?<div className="empty"><p>Aucune commande pour l’instant.</p></div>:<div className="tw"><table><thead><tr><th>N°</th><th>Client</th><th>Articles</th><th>Total</th><th>Livraison</th><th>Statut</th></tr></thead><tbody>{q.data.o.map(o=>{const c=q.data.p[o.user_id]||{}
  return <tr key={o.id}><td>{short(o.id)}<br/><span className="note">{fmt(o.created_at)}</span></td><td>{c.full_name||c.email||'—'}<br/>{o.delivery_phone||c.phone}</td><td>{o.order_items.map(i=>lbl(i)).join(', ')}</td><td>{formatXOF(o.total_xof)}</td><td>{o.delivery_mode==='home'?o.delivery_address:'Retrait'}</td>
@@ -174,3 +174,40 @@ export function AdminZonesLive(){const q=useQuery(()=>supabase.from('delivery_zo
  <Load q={q}>{q.data&&(q.data.length===0?<div className="empty"><p>Aucune zone. Sans zone, c’est vous qui fixez chaque tarif à la main.</p></div>:<div className="tw"><table><thead><tr><th>Zone</th><th>Tarif (FCFA)</th><th>Active</th><th></th></tr></thead><tbody>{q.data.map(z=><tr key={z.id}><td>{z.name}</td>
  <td><input aria-label={'Tarif '+z.name} inputMode="numeric" defaultValue={z.fee_xof} onBlur={e=>{const v=e.target.value.replace(/\D/g,'');if(v!==''&&+v!==z.fee_xof)act(supabase.from('delivery_zones').update({fee_xof:+v}).eq('id',z.id))}}/></td>
  <td><input type="checkbox" aria-label={'Zone active '+z.name} checked={z.is_active} onChange={e=>act(supabase.from('delivery_zones').update({is_active:e.target.checked}).eq('id',z.id))}/></td><td><button className="lnk" onClick={()=>{if(confirm('Supprimer la zone '+z.name+' ?'))act(supabase.from('delivery_zones').delete().eq('id',z.id))}}>Supprimer</button></td></tr>)}</tbody></table></div>)}</Load></>}
+
+const QST={new:'En attente de devis',quoted:'Devis reçu',accepted:'Commande créée',declined:'Refusé',unavailable:'Indisponible',cancelled:'Annulée'}
+export function QuotesPage(){const {user}=useStore();const nav=useNavigate();const q=useQuery(()=>supabase.from('quote_requests').select('*').eq('user_id',user.id).order('created_at',{ascending:false}))
+ const [f,setF]=useState({link:'',title:'',details:'',qty:'1'});const [e,setE]=useState({});const [ok,setOk]=useState(false);const [busy,setBusy]=useState(false)
+ const [acc,setAcc]=useState(null);const [o,setO]=useState({mode:'home',addr:'',phone:user.phone||''});const [m,setM]=useState('');const on=k=>ev=>setF({...f,[k]:ev.target.value});const err=k=>e[k]&&<span className="err" role="alert">{e[k]}</span>
+ const submit=async ev=>{ev.preventDefault();const x={};try{const u=new URL(f.link.trim());if(!/^https?:$/.test(u.protocol))throw 0}catch{x.link='Collez un lien complet, commençant par https://'}
+  const n=parseInt(f.qty,10);if(!(n>=1&&n<=1000))x.qty='Indiquez une quantité entre 1 et 1000.';setE(x);if(Object.keys(x).length)return
+  setBusy(true);const {error}=await supabase.rpc('request_quote',{p_link:f.link.trim(),p_title:f.title.trim()||null,p_details:f.details.trim()||null,p_qty:n});setBusy(false)
+  if(error)return setE({form:error.message.includes('trop')?'Vous avez déjà 10 demandes en cours.':'Demande impossible : '+error.message});setF({link:'',title:'',details:'',qty:'1'});setOk(true);q.reload()}
+ const respond=async(x,accept)=>{setM('');if(accept&&o.mode==='home'&&o.addr.trim().length<8)return setM('Indiquez votre adresse de livraison (quartier et repère).')
+  if(accept&&!/^\+?[0-9 ]{8,15}$/.test(o.phone.trim()))return setM('Entrez un numéro de téléphone valide.')
+  const {data,error}=await supabase.rpc('respond_quote',{p_id:x.id,p_accept:accept,p_mode:accept?o.mode:null,p_address:accept?(o.mode==='home'?o.addr.trim():'Retrait à l’entreprise'):null,p_phone:accept?o.phone.trim():null})
+  if(error)return setM('Action impossible : '+error.message);if(accept)return nav('/commande/confirmation',{state:{orderId:data}});setAcc(null);q.reload()}
+ return <><h1 className="ptitle">Demander un devis</h1><p>Vous avez trouvé un produit sur un site chinois (1688, Taobao, Pinduoduo, AliExpress…) ? Collez son lien : TAIPOC vous répond avec un prix en FCFA, sans engagement.</p>
+ <form className="form" noValidate onSubmit={submit}><label>Lien du produit<input type="url" inputMode="url" value={f.link} onChange={on('link')} placeholder="https://…" aria-invalid={!!e.link}/>{err('link')}</label>
+ <label>Nom du produit (facultatif)<input maxLength={200} value={f.title} onChange={on('title')}/></label><label>Taille, couleur, options souhaitées<textarea rows="2" maxLength={500} value={f.details} onChange={on('details')}/></label>
+ <label>Quantité<input inputMode="numeric" value={f.qty} onChange={on('qty')} aria-invalid={!!e.qty}/>{err('qty')}</label>{err('form')}<button className="btn btn-primary block" disabled={busy}>{busy?'Patientez…':'Envoyer la demande'}</button>{ok&&<p className="okmsg" role="status">Demande reçue. Vous verrez le devis ici dès qu’il est prêt.</p>}</form>
+ <h2 style={{marginTop:24}}>Mes demandes</h2><Load q={q}>{q.data&&(q.data.length===0?<div className="empty"><p>Aucune demande pour l’instant.</p></div>:<ul className="list">{q.data.map(x=><li key={x.id} className="line" style={{display:'block'}}>
+ <div style={{display:'flex',justifyContent:'space-between',gap:8}}><b>{x.title||'Produit sans nom'}</b><span className={'st'+(x.status==='quoted'||x.status==='accepted'?' st-paid':'')}>{QST[x.status]}</span></div>
+ <p className="note" style={{wordBreak:'break-all'}}>{x.link}</p><p className="note">Quantité : {x.quantity}{x.details?' · '+x.details:''}</p>
+ {x.status==='quoted'&&<div className="sum"><div><span>Prix unitaire</span><b>{formatXOF(x.unit_price_xof)} FCFA</b></div><div><span>Total produits ({x.quantity})</span><b>{formatXOF(x.unit_price_xof*x.quantity)} FCFA</b></div><div><span>Frais d’expédition</span><span>{x.shipping_xof!=null?formatXOF(x.shipping_xof)+' FCFA':'confirmés avant paiement'}</span></div><div><span>Délai estimé</span><span>{x.lead_time_days!=null?x.lead_time_days+' jours':'à confirmer'}</span></div>{x.quote_note&&<p className="note">{x.quote_note}</p>}
+  {acc===x.id?<div className="form"><label className="radio"><input type="radio" checked={o.mode==='home'} onChange={()=>setO({...o,mode:'home'})}/>Livraison à domicile</label><label className="radio"><input type="radio" checked={o.mode==='pickup'} onChange={()=>setO({...o,mode:'pickup'})}/>Retrait à l’entreprise</label>
+   {o.mode==='home'&&<label>Adresse et repère<textarea rows="2" value={o.addr} onChange={ev=>setO({...o,addr:ev.target.value})}/></label>}<label>Téléphone<input type="tel" value={o.phone} onChange={ev=>setO({...o,phone:ev.target.value})}/></label>{m&&<span className="err" role="alert">{m}</span>}<button className="btn btn-primary block" onClick={()=>respond(x,true)}>Confirmer la commande</button></div>
+   :<><button className="btn btn-primary block" onClick={()=>setAcc(x.id)}>Accepter et commander</button><button className="lnk" onClick={()=>respond(x,false)}>Refuser ce devis</button></>}</div>}
+ {x.status==='unavailable'&&<p className="note">{x.quote_note||'Ce produit n’est pas disponible. Contactez-nous pour une alternative.'}</p>}
+ {x.status==='new'&&<button className="lnk" onClick={async()=>{await supabase.rpc('cancel_quote',{p_id:x.id});q.reload()}}>Annuler la demande</button>}</li>)}</ul>)}</Load></>}
+export function QuotesRoute(){const {user}=useStore();if(!user)return <Navigate to="/connexion" state={{from:'/devis'}}/>;return <QuotesPage/>}
+export function AdminQuotesLive(){const q=useQuery(async()=>{const [r,p]=await Promise.all([supabase.from('quote_requests').select('*').order('created_at',{ascending:false}),supabase.from('profiles').select('id,full_name,email,phone')]);return {data:{r:r.data||[],p:byId(p.data)},error:r.error||p.error}});const [msg,setMsg]=useState('');const [ed,setEd]=useState({})
+ const set=(id,k,v)=>setEd({...ed,[id]:{...(ed[id]||{}),[k]:v}})
+ const send=async x=>{const v=ed[x.id]||{};const price=v.price??x.unit_price_xof;if(price==null||price===''||!(+price>=0))return setMsg('Indiquez le prix unitaire en FCFA.')
+  const num=(a,b)=>a===undefined?b:(a===''?null:+a);const {error}=await supabase.from('quote_requests').update({unit_price_xof:+price,shipping_xof:num(v.ship,x.shipping_xof),lead_time_days:num(v.lead,x.lead_time_days),quote_note:v.note??x.quote_note,status:'quoted',updated_at:new Date().toISOString()}).eq('id',x.id);setMsg(error?'Refusé : '+error.message:'');setEd({...ed,[x.id]:{}});q.reload()}
+ const no=async x=>{const {error}=await supabase.from('quote_requests').update({status:'unavailable',quote_note:(ed[x.id]||{}).note??x.quote_note,updated_at:new Date().toISOString()}).eq('id',x.id);setMsg(error?'Refusé : '+error.message:'');q.reload()}
+ return <Load q={q}>{q.data&&<><Msg m={msg}/><p className="note">Vérifiez le lien chez le fournisseur, fixez votre prix en FCFA, puis envoyez le devis : le client le voit dans son compte et peut l’accepter.</p>{q.data.r.length===0?<div className="empty"><p>Aucune demande de devis.</p></div>:<ul className="list">{q.data.r.map(x=>{const c=q.data.p[x.user_id]||{};const open=x.status==='new'||x.status==='quoted';const v=ed[x.id]||{}
+ return <li key={x.id} className="line" style={{display:'block'}}><div style={{display:'flex',justifyContent:'space-between',gap:8}}><b>{x.title||'Produit sans nom'} × {x.quantity}</b><span className="st">{QST[x.status]}</span></div>
+ <p className="note">{c.full_name||c.email} · {c.phone||''} · {fmt(x.created_at)}</p><p style={{wordBreak:'break-all',margin:'4px 0'}}><a className="lnk" href={x.link} target="_blank" rel="noopener noreferrer nofollow">{x.link}</a></p>{x.details&&<p className="note">Options : {x.details}</p>}
+ {open&&<div className="form inline" style={{maxWidth:'none',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))'}}><label>Prix unitaire (FCFA)<input inputMode="numeric" value={v.price??x.unit_price_xof??''} onChange={e=>set(x.id,'price',e.target.value.replace(/\D/g,''))}/></label><label>Expédition (FCFA)<input inputMode="numeric" value={v.ship??x.shipping_xof??''} onChange={e=>set(x.id,'ship',e.target.value.replace(/\D/g,''))}/></label><label>Délai (jours)<input inputMode="numeric" value={v.lead??x.lead_time_days??''} onChange={e=>set(x.id,'lead',e.target.value.replace(/\D/g,''))}/></label>
+  <label style={{gridColumn:'1/-1'}}>Message au client<input maxLength={500} value={v.note??x.quote_note??''} onChange={e=>set(x.id,'note',e.target.value)}/></label><button className="btn btn-primary" onClick={()=>send(x)}>{x.status==='quoted'?'Mettre à jour le devis':'Envoyer le devis'}</button><button className="btn btn-secondary" onClick={()=>no(x)}>Produit indisponible</button></div>}</li>})}</ul>}</>}</Load>}

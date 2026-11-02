@@ -22,7 +22,7 @@ export function Auth({mode}){const {user}=useStore();const nav=useNavigate();con
  {mode==='login'&&<p><Link to="/mot-de-passe-oublie" className="lnk">Mot de passe oublié ?</Link> · <Link to="/inscription" state={loc.state} className="lnk">Créer un compte</Link></p>}
  {mode==='register'&&<p>Déjà inscrit ? <Link to="/connexion" state={loc.state} className="lnk">Se connecter</Link></p>}</form>}
 export function AccountLayout(){const {user,logout}=useStore();if(!user)return <Navigate to="/connexion"/>
- const tabs=[['/compte','Accueil'],['/commandes','Commandes'],['/demande-livraison','Livraison'],['/adresses','Adresses'],['/favoris','Favoris'],['/profil','Profil'],['/assistance','Assistance']]
+ const tabs=[['/compte','Accueil'],['/commandes','Commandes'],['/demande-livraison','Livraison'],['/devis','Devis'],['/adresses','Adresses'],['/favoris','Favoris'],['/profil','Profil'],['/assistance','Assistance']]
  if(user.driver)tabs.push(['/livreur','Espace livreur']);if(user.admin)tabs.push(['/admin','Administration'])
  return <><h1 className="ptitle">Bonjour {user.name}</h1><nav className="tabs" aria-label="Espace client">{tabs.map(([t,n])=><NavLink key={t} to={t} end>{n}</NavLink>)}<button className="lnk" onClick={logout}>Déconnexion</button></nav><Outlet/></>}
 export function Addresses(){const {addresses,addAddress,removeAddress}=useStore();const [a,setA]=useState('');const [e,setE]=useState('')
